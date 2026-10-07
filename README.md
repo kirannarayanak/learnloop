@@ -59,11 +59,19 @@ Working: the full pipeline (ingest → graph → draft → verify → publish), 
 validator, the publish gate, the generation cache and cost accounting, the streak/points
 rules, and a learner app showing the skill map, lesson provenance and practice.
 
-Not yet: real model adapters (the interface exists, the HTTP calls don't), the Postgres
-store, the human review UI, FSRS, offline service worker, auth.
+Real Gemini and Claude adapters, prompts, a parser for untrusted model output, and a CLI:
 
-**Nothing has run against a real model yet.** The fake provider proves the plumbing, the
-gate and the economics — never content quality. That is what the eval set is for
+```
+npm run generate -- --file ./notes.md --domain emerging-tech --dry-run
+```
+
+Not yet: the Postgres store, the human review UI, FSRS, the eval harness, offline service
+worker, auth.
+
+**The adapters have not been exercised against the live APIs** — no keys were available
+when they were written, so model ids and Flash pricing need confirming before the first
+real run. The fake provider proves the plumbing, the gate and the economics; it says
+nothing about content quality. That is what the eval set is for
 ([docs/09-model-strategy.md](docs/09-model-strategy.md)).
 
 ## Non-negotiables

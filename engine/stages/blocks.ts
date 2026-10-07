@@ -261,3 +261,102 @@ export function validateLessonStructure(blocks: readonly LessonBlock[]): LessonS
 
   return problems;
 }
+
+/**
+ * Review items, derived from the lesson's own retrieval blocks.
+ *
+ * Originally the pipeline generated a separate exercise bank alongside the lesson. Once
+ * retrieval moved INTO the lesson (docs/11-lesson-design.md) that second bank became a
+ * duplicate: more generation cost, and review questions the learner had never seen.
+ * Deriving them keeps the spaced-review queue consistent with the lesson and costs
+ * nothing.
+ */
+export interface DerivedExercise {
+  kind: 'mcq';
+  promptMd: string;
+  answer: { correct: number };
+  explanationMd: string;
+  difficulty: number;
+}
+
+export function exercisesFromBlocks(blocks: readonly LessonBlock[]): DerivedExercise[] {
+  const out: DerivedExercise[] = [];
+
+  for (const block of blocks) {
+    if (block.type === 'check') {
+      out.push({
+        kind: 'mcq',
+        promptMd: block.question,
+        answer: { correct: block.correctIndex },
+        explanationMd: block.explanation,
+        // Calibrated from real attempts later; this is only a starting prior.
+        difficulty: 0.5,
+      });
+    } else if (block.type === 'predict') {
+      out.push({
+        kind: 'mcq',
+        promptMd: block.question,
+        answer: { correct: block.correctIndex },
+        explanationMd: block.reveal,
+        // Prediction questions are asked before the explanation, so they are harder
+        // by construction.
+        difficulty: 0.7,
+      });
+    } else if (block.type === 'worked_example') {
+      for (const step of block.steps) {
+        if (step.faded === true && step.options !== undefined) {
+          out.push({
+            kind: 'mcq',
+            promptMd: `${block.goal}\n\n${step.show === '???' ? 'What comes next?' : step.show}`,
+            answer: { correct: step.correctIndex ?? 0 },
+            explanationMd: step.explain,
+            difficulty: 0.6,
+          });
+        }
+      }
+    }
+  }
+
+  return out;
+}
+
+/**
+ * Flatten a lesson to plain text.
+ *
+ * Not for display — the blocks are the lesson. This feeds Postgres full-text search and
+ * export, where a searchable body is needed and structure is not.
+ */
+export function blocksToPlainText(blocks: readonly LessonBlock[]): string {
+  const parts: string[] = [];
+
+  for (const block of blocks) {
+    switch (block.type) {
+      case 'pretrain':
+        parts.push(block.terms.map((t) => `${t.term}: ${t.gloss}`).join('\n'), block.narration);
+        break;
+      case 'concept':
+        parts.push(`## ${block.heading}`, block.keyPoints.join('\n'), block.narration);
+        break;
+      case 'diagram':
+        parts.push(`## ${block.caption}`, block.steps.map((s) => `${s.label}: ${s.narration}`).join('\n'));
+        break;
+      case 'predict':
+        parts.push(block.question, block.reveal);
+        break;
+      case 'worked_example':
+        parts.push(`## ${block.goal}`, block.steps.map((s) => `${s.show} — ${s.explain}`).join('\n'));
+        break;
+      case 'check':
+        parts.push(block.question, block.explanation);
+        break;
+      case 'explain_back':
+        parts.push(block.prompt, block.modelAnswer);
+        break;
+      case 'recap':
+        parts.push(block.points.join('\n'), block.narration);
+        break;
+    }
+  }
+
+  return parts.filter((p) => p.trim() !== '').join('\n\n');
+}

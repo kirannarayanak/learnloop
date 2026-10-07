@@ -63,6 +63,16 @@ to a different family on purpose. Embeddings are always an open model.
   it, it isn't a skill — don't create the row.
 - The prerequisite graph must stay acyclic. `engine/graph/validate.ts` fails the job on a cycle.
 
+## Generating against a real source
+```
+npm run generate -- --file ./notes.md --domain emerging-tech --dry-run
+npm run generate -- --url https://example.com/docs --domain emerging-tech
+```
+Falls back to the fake providers when `GOOGLE_API_KEY` / `ANTHROPIC_API_KEY` are unset, so
+it is safe to run without keys. With keys it prints a cost estimate and asks before
+spending. Prompts live in `engine/stages/prompts.ts` — that file, not the model choice, is
+what decides whether a lesson teaches.
+
 ## Running it
 npm workspaces; run everything from the repo root.
 ```
@@ -86,9 +96,12 @@ Done: schema + incentives, provider adapter, DAG validator, publish gate, streak
 the full pipeline (ingest -> graph -> draft -> verify -> publish) against an in-memory
 store and a fake provider, and the learner app.
 
-Not built yet, in rough order: real Gemini/Claude adapters (the interface exists, the HTTP
-does not), the Postgres `Store` implementation, the human review UI, FSRS replacing the
-3-correct mastery stand-in, offline service worker, and auth. See `docs/06-roadmap.md`.
+Real Gemini and Claude adapters exist (`engine/providers/`), with prompts, a parser for
+untrusted model output, and a CLI. Not built yet: the Postgres `Store`, the human review UI,
+FSRS replacing the 3-correct mastery stand-in, the eval harness, offline service worker,
+auth. See `docs/06-roadmap.md`.
 
-**Nothing has run against a real model yet.** `engine/providers/fake.ts` proves the
-plumbing, the gate, the cache and the cost accounting — never content quality.
+**The adapters have not been exercised against the live APIs** — no keys in this
+environment. Model ids and Flash prices need confirming before the first real run.
+`engine/providers/fake.ts` proves the plumbing, the gate, the cache and the cost
+accounting; it says nothing about content quality.

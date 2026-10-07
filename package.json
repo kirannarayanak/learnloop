@@ -10,6 +10,7 @@
     "test": "npm test --workspace @learnloop/engine",
     "seed": "npm run seed --workspace @learnloop/engine",
     "dev": "npm run seed && npm run dev --workspace @learnloop/web",
-    "build": "npm run seed && npm run build --workspace @learnloop/web"
+    "build": "npm run seed && npm run build --workspace @learnloop/web",
+    "generate": "npm run generate --workspace @learnloop/engine --"
   }
 }

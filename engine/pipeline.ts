@@ -18,7 +18,12 @@ import { evaluatePublishGate, type LessonForPublish, type Refusal } from './publ
 import { generateCached, newStats, type CacheStats } from './cache/content-cache.ts';
 import { assertVerifierIndependence, routing } from './providers/routing.ts';
 import type { Provider } from './providers/types.ts';
-import { validateLessonStructure } from './stages/blocks.ts';
+import { blocksToPlainText, exercisesFromBlocks, validateLessonStructure } from './stages/blocks.ts';
+import { parseDraft } from './stages/parse.ts';
+import {
+  DRAFT_SCHEMA, DRAFT_SYSTEM, GRAPH_SCHEMA, GRAPH_SYSTEM, VERIFY_SCHEMA, VERIFY_SYSTEM,
+  draftPrompt, graphPrompt, verifyPrompt,
+} from './stages/prompts.ts';
 import {
   assertSkillStatements,
   PROMPT_VERSION,
@@ -110,7 +115,14 @@ export async function runPipeline(
     store,
     providers.generator,
     routing.graph,
-    { stage: 'graph', prefix: sourcePrefix, suffix: 'extract-skill-graph', maxOutputTokens: 8000, batchable: true },
+    {
+      stage: 'graph',
+      system: GRAPH_SYSTEM,
+      ...graphPrompt(sourcePrefix, domain.title),
+      schema: GRAPH_SCHEMA,
+      maxOutputTokens: 8000,
+      batchable: true,
+    },
     stats,
     log,
   );
@@ -202,6 +214,15 @@ export async function runPipeline(
     const slug = [...slugToId.entries()].find(([, v]) => v === skillId)?.[0];
     if (slug === undefined) continue; // a reused skill from a previous path
 
+    const spec = graph.skills.find((s) => s.slug === slug);
+    const skillTitle = spec?.title ?? slug;
+    const skillStatement = spec?.statement ?? slug;
+    const skillMinutes = spec?.estMinutes ?? 8;
+    // Told to the drafter as "assume known", so lessons don't re-teach each other.
+    const coveredStatements = lessons
+      .map((l) => graph.skills.find((sk) => slugToId.get(sk.slug) === l.skillId)?.statement)
+      .filter((x): x is string => x !== undefined);
+
     // Idempotence: an unchanged source at the same prompt version must not re-draft.
     // Without this the freshness cron would duplicate every lesson on every run.
     const existingLesson = await store.findLesson(skillId, locale, PROMPT_VERSION);
@@ -212,15 +233,29 @@ export async function runPipeline(
     }
 
     // --- draft. Source material in the prefix (cached), skill in the suffix.
-    const drafted = await generateCached<DraftOutput>(
+    const drafted = await generateCached<unknown>(
       store,
       providers.generator,
       routing.draft,
-      { stage: 'draft', prefix: sourcePrefix, suffix: slug, maxOutputTokens: 4000, batchable: true },
+      {
+        stage: 'draft',
+        tag: slug,
+        system: DRAFT_SYSTEM,
+        ...draftPrompt(
+          sourcePrefix,
+          { title: skillTitle, statement: skillStatement, estMinutes: skillMinutes },
+          coveredStatements,
+        ),
+        schema: DRAFT_SCHEMA,
+        maxOutputTokens: 16000,
+        batchable: true,
+      },
       stats,
       log,
     );
-    const draft = drafted.output;
+
+    // Everything past this line is typed; everything before it is untrusted model output.
+    const draft = parseDraft(drafted.output);
 
     // A model asked for a "rich lesson" will happily return eight concept blocks in a
     // row, which is a wall of text in a costume. These checks encode
@@ -238,7 +273,8 @@ export async function runPipeline(
       skillId,
       locale,
       title: draft.title,
-      bodyMd: draft.bodyMd,
+      // Searchable flattening; the blocks are the lesson.
+      bodyMd: blocksToPlainText(draft.blocks),
       blocks: draft.blocks,
       estMinutes: draft.estMinutes,
       genModel: routing.draft.id,
@@ -251,8 +287,10 @@ export async function runPipeline(
       draft.citations.map((c) => ({ lessonId: lesson.id, sourceId: source.id, quote: c.quote })),
     );
 
+    // Review items come from the lesson's own retrieval blocks rather than a second
+    // generated bank — cheaper, and the learner reviews what they actually saw.
     const exercises = await store.insertExercises(
-      draft.exercises.map((e) => ({
+      exercisesFromBlocks(draft.blocks).map((e) => ({
         skillId,
         lessonId: lesson.id,
         locale,
@@ -268,16 +306,21 @@ export async function runPipeline(
 
     // --- verify. ONLY the cited spans go in the prefix. The draft's own reasoning is
     // deliberately withheld: a verifier shown the justification will agree with it.
-    const citedSpans = draft.citations.map((c) => c.quote).join('\n');
     const verified = await generateCached<VerifyOutput>(
       store,
       providers.verifier,
       routing.verify,
       {
         stage: 'verify',
-        prefix: citedSpans,
-        suffix: slug,
-        maxOutputTokens: 2000,
+        tag: slug,
+        system: VERIFY_SYSTEM,
+        ...verifyPrompt(
+          draft.citations.map((c) => c.quote),
+          JSON.stringify(draft.blocks),
+          skillStatement,
+        ),
+        schema: VERIFY_SCHEMA,
+        maxOutputTokens: 4000,
         batchable: true,
       },
       stats,

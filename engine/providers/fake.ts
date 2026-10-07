@@ -23,8 +23,6 @@ export interface FakeOptions {
   failVerifyFor?: readonly string[];
   /** Simulate a provider that reports no prompt-cache reads, to test the cost warning. */
   neverCachePrefix?: boolean;
-  /** How many exercises each draft produces. */
-  exercisesPerSkill?: number;
   /**
    * Emit the hand-authored golden lesson for this skill slug instead of the generic
    * structure. The seed uses it so the app shows what the generator is actually aimed
@@ -47,7 +45,7 @@ function estimateTokens(s: string): number {
 export class FakeProvider implements Provider {
   readonly family: Family;
   /** Every request seen, so tests can assert on prompt construction. */
-  readonly calls: { stage: Stage; prefixLen: number; suffix: string }[] = [];
+  readonly calls: { stage: Stage; prefixLen: number; suffix: string; tag: string }[] = [];
 
   private readonly opts: Required<Omit<FakeOptions, 'family'>>;
   private seenPrefixes = new Set<string>();
@@ -57,7 +55,6 @@ export class FakeProvider implements Provider {
     this.opts = {
       failVerifyFor: options.failVerifyFor ?? [],
       neverCachePrefix: options.neverCachePrefix ?? false,
-      exercisesPerSkill: options.exercisesPerSkill ?? 4,
       goldenForSlug: options.goldenForSlug ?? '',
     };
   }
@@ -67,7 +64,12 @@ export class FakeProvider implements Provider {
   }
 
   async generate<T>(req: GenRequest, model: ModelRef): Promise<GenResult<T>> {
-    this.calls.push({ stage: req.stage, prefixLen: req.prefix.length, suffix: req.suffix });
+    this.calls.push({
+      stage: req.stage,
+      prefixLen: req.prefix.length,
+      suffix: req.suffix,
+      tag: req.tag ?? '',
+    });
 
     // Model the real caching behaviour: the first call on a given prefix pays full
     // price, later calls on the same prefix read from cache. This is what makes the
@@ -110,10 +112,11 @@ export class FakeProvider implements Provider {
         return this.graph(topicOf(req.prefix));
 
       case 'draft':
-        return this.draft(req.suffix);
+        return this.draft(req.tag ?? 'unknown-skill');
+
 
       case 'verify':
-        return this.verify(req.suffix);
+        return this.verify(req.tag ?? 'unknown-skill');
 
       case 'translate':
         return { value: `[translated] ${req.suffix}` };
@@ -151,34 +154,23 @@ export class FakeProvider implements Provider {
   }
 
   private draft(skillSlug: string): DraftOutput {
-    const exercises = Array.from({ length: this.opts.exercisesPerSkill }, (_, i) => ({
-      kind: 'mcq' as const,
-      promptMd: `Question ${i + 1} about ${skillSlug}?`,
-      answer: { correct: i % 3 },
-      // Present whether the learner was right or wrong.
-      explanationMd: `The answer is option ${(i % 3) + 1} because of how ${skillSlug} works.`,
-      difficulty: 0.2 + i * 0.2,
-    }));
-
     const golden = skillSlug === this.opts.goldenForSlug;
-
     return {
       title: `Lesson: ${skillSlug}`,
       bodyMd: `## ${skillSlug}\n\nExplanation, worked example, common misconception, recap.`,
       blocks: golden ? goldenLessonBlocks : genericBlocks(skillSlug),
       estMinutes: 8,
-      exercises,
       citations: golden ? goldenCitations : [{ quote: `authoritative sentence about ${skillSlug}` }],
     };
   }
 
   private verify(skillSlug: string): VerifyOutput {
-    const shouldFail = this.opts.failVerifyFor.includes(skillSlug);
+    const failing = this.opts.failVerifyFor.find((slug) => slug === skillSlug);
     return {
-      claimsSupported: !shouldFail,
+      claimsSupported: failing === undefined,
       answersCorrect: true,
       teachesSkill: true,
-      issues: shouldFail ? [`claim about ${skillSlug} is not supported by any cited span`] : [],
+      issues: failing === undefined ? [] : [`claim about ${failing} is not supported by any cited span`],
     };
   }
 }

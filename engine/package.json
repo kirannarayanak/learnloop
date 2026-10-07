@@ -7,7 +7,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts",
-    "seed": "node scripts/seed.ts"
+    "seed": "node scripts/seed.ts",
+    "generate": "node scripts/generate.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -15,5 +16,10 @@
   },
   "exports": {
     "./*": "./*"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@google/genai": "^2.27.0",
+    "zod": "^4.6.5"
   }
 }

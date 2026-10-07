@@ -16,7 +16,7 @@ const SEP = '\n--8<--\n';
 
 export function cacheKeyFor(req: GenRequest, model: ModelRef): string {
   return createHash('sha256')
-    .update([PROMPT_VERSION, model.id, req.stage, req.prefix, req.suffix].join(SEP))
+    .update([PROMPT_VERSION, model.id, req.stage, req.tag ?? '', req.prefix, req.suffix].join(SEP))
     .digest('hex');
 }
 

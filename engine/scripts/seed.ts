@@ -12,7 +12,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { runPipeline } from '../pipeline.ts';
 import { MemoryStore } from '../store/memory.ts';
-import { FakeProvider } from '../providers/fake.ts';
+import { fakeProviders } from '../providers/index.ts';
 import type { RiskTier } from '../store/types.ts';
 
 const OUT = resolve(import.meta.dirname, '../../web/lib/seed.json');
@@ -82,14 +82,7 @@ async function main(): Promise<void> {
     // One source gets the hand-authored golden lesson, so the app shows what the
     // generator is AIMED at rather than only its scaffolding. The rest get the generic
     // block structure, which exercises the renderer and the structural validator.
-    const providers = {
-      generator: new FakeProvider(
-        s.golden === true
-          ? { family: 'gemini' as const, goldenForSlug: 'call-stack' }
-          : { family: 'gemini' as const },
-      ),
-      verifier: new FakeProvider({ family: 'claude' as const }),
-    };
+    const providers = fakeProviders(s.golden === true ? { goldenForSlug: 'call-stack' } : {});
 
     const result = await runPipeline(store, providers, {
       domainSlug: s.domainSlug,

@@ -9,8 +9,8 @@
 
 import type { LessonBlock } from './blocks.ts';
 
-/** v2: lessons are structured blocks, not a markdown body (docs/11-lesson-design.md). */
-export const PROMPT_VERSION = 'v2';
+/** v3: real prompts; review items derive from the lesson's own retrieval blocks. */
+export const PROMPT_VERSION = 'v3';
 
 export interface NormalizedSource {
   markdown: string;
@@ -34,15 +34,6 @@ export interface GraphOutput {
   edges: { prereqSlug: string; skillSlug: string; strength: number }[];
 }
 
-export interface ExerciseDraft {
-  kind: 'mcq' | 'multi' | 'cloze' | 'short' | 'code' | 'numeric' | 'order';
-  promptMd: string;
-  answer: unknown;
-  /** Shown right or wrong. The explanation is the teaching moment, not a reward. */
-  explanationMd: string;
-  difficulty: number;
-}
-
 export interface DraftOutput {
   title: string;
   /** Plain-text fallback. The real lesson is `blocks`. */
@@ -50,7 +41,6 @@ export interface DraftOutput {
   /** The lesson proper. Structure is validated before publish — see blocks.ts. */
   blocks: LessonBlock[];
   estMinutes: number;
-  exercises: ExerciseDraft[];
   /** Spans from the source that the lesson's claims rest on. Empty means cannot publish. */
   citations: { quote: string }[];
 }

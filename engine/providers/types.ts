@@ -42,6 +42,14 @@ export interface ModelRef {
 
 export interface GenRequest {
   stage: Stage;
+  /** Stage instructions. Stable per stage, so providers put it in the cacheable slot. */
+  system?: string;
+  /**
+   * Identifies the unit of work (usually a skill slug). **Never sent to the model** —
+   * it is metadata for logging, cache keys and test fakes. Prompt content is the
+   * learner's business; this is ours.
+   */
+  tag?: string;
   /** Stable prefix — source material, instructions. Cache this. */
   prefix: string;
   /** Volatile per-item part. Must come AFTER the prefix, or caching breaks. */
