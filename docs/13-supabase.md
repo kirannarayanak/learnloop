@@ -89,11 +89,33 @@ A credential-free route to the approve button sitting alongside real auth is the
 backdoor nobody notices, because everything appears to work. Verified: with both set, the
 tool asks you to sign in.
 
+## Two paths to the database, and only one is RLS-protected
+
+This is worth internalising before adding a query.
+
+| Path | Used by | RLS? |
+| --- | --- | --- |
+| Supabase client with the user's JWT | `web/lib/supabase/*`, the reviewer role check | **Yes** |
+| Direct Postgres (`web/lib/review-store.ts`) | Content reads, the review tool, `/api/sync`, the pipeline | **No — connects as the database owner** |
+
+The direct path is intentional: the pipeline must write content, and the review tool must
+see unpublished lessons, neither of which RLS permits. But it means **the trust boundary on
+that path is the session check in the calling route, not the database.** So:
+
+- Never pass a user-supplied id into a direct query. Derive it from the session —
+  `/api/sync` takes the user id from `currentUser()` and ignores the body, because a
+  client that could name whose progress it writes could write anyone's.
+- Reads served to anonymous visitors must filter themselves. `listPublishedPaths()` does.
+  A new query that forgets will happily serve a draft.
+- Prefer the Supabase client where either would work, so RLS is a second line of defence
+  rather than absent.
+
 ## What is still open
 
-- **Learner progress is still browser-local.** The schema, policies and auth are all in
-  place for server-side progress, but the sync itself is not written. Signing in does not
-  yet carry a streak across devices.
+- **The signed-in sync flow is unverified end to end.** The store side has contract tests
+  against a real Postgres, the endpoint returns the right codes, and the client queues and
+  flushes — but nobody has actually signed in and watched a streak move between two
+  devices, because that needs a Supabase project. Do this first after provisioning.
 - **No org/cohort management UI.** The policies are written and tested; the screens are
   wave 3.
 - **The minors data-protection policy is still not settled** (`docs/00-decisions.md`). Auth

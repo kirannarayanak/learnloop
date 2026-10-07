@@ -10,10 +10,12 @@
 import { createHash } from 'node:crypto';
 import type {
   CacheRecord, CitationRecord, DomainRecord, ExerciseRecord, JobKind, JobRecord,
-  LessonForReview, LessonRecord, PathRecord, ReviewDecision, ReviewOutcome,
-  ReviewQueueEntry, ReviewQueueItem, SkillRecord, SourceRecord, Store, VerifyState,
+  LearnerState, LearnerSyncInput, LessonForReview, LessonRecord, PathRecord, ReviewDecision,
+  ReviewOutcome, ReviewQueueEntry, ReviewQueueItem, SkillRecord, SourceRecord, Store,
+  SyncAttempt, SyncPointEvent, VerifyState,
 } from './types.ts';
 import { evaluatePublishGate } from '../publish/gate.ts';
+import { projectMastery, projectPoints, projectStreak } from '../incentives/project.ts';
 
 let counter = 0;
 /** Deterministic ids keep test assertions and golden files stable. */
@@ -52,6 +54,9 @@ export class MemoryStore implements Store {
   readonly cache = new Map<string, CacheRecord>();
   readonly jobs = new Map<string, JobRecord>();
   readonly reviewQueue: ReviewQueueItem[] = [];
+  /** Append-only learner logs, keyed by user. Everything else is projected from them. */
+  readonly learnerAttempts = new Map<string, SyncAttempt[]>();
+  readonly learnerPoints = new Map<string, SyncPointEvent[]>();
   /** Audit trail of human decisions. Append-only, like attempts. */
   readonly reviews: {
     entity: string; entityId: string; verdict: string; notes: string;
@@ -99,7 +104,24 @@ export class MemoryStore implements Store {
   }
 
   async insertEdges(edges: { prereqId: string; skillId: string; strength: number }[]): Promise<void> {
-    this.edges.push(...edges);
+    for (const edge of edges) {
+      const at = this.edges.findIndex(
+        (e) => e.prereqId === edge.prereqId && e.skillId === edge.skillId,
+      );
+      if (at === -1) this.edges.push(edge);
+      else this.edges[at] = edge;
+    }
+  }
+
+  async getSkill(skillId: string): Promise<SkillRecord | undefined> {
+    return this.skills.get(skillId);
+  }
+
+  async hardPrerequisitesOf(skillId: string): Promise<string[]> {
+    return this.edges
+      .filter((e) => e.skillId === skillId && e.strength >= 0.9)
+      .map((e) => e.prereqId)
+      .sort();
   }
 
   async insertLesson(l: Omit<LessonRecord, 'id'>): Promise<LessonRecord> {
@@ -107,6 +129,10 @@ export class MemoryStore implements Store {
     this.lessons.set(rec.id, rec);
     return rec;
   }
+  async getLessonById(lessonId: string): Promise<LessonRecord | undefined> {
+    return this.lessons.get(lessonId);
+  }
+
   async findLesson(
     skillId: string,
     locale: string,
@@ -353,6 +379,58 @@ export class MemoryStore implements Store {
 
     await this.publishPath(path.id, new Date().toISOString());
     return path.id;
+  }
+
+  async syncLearner(input: LearnerSyncInput): Promise<LearnerState> {
+    const attempts = this.learnerAttempts.get(input.userId) ?? [];
+    const points = this.learnerPoints.get(input.userId) ?? [];
+
+    // Union by idempotency key. A replayed outbox must not double-count, and an outbox
+    // IS replayed every time a device reconnects mid-flush.
+    const seenAttempts = new Set(attempts.map((a) => a.clientId));
+    for (const a of input.attempts) {
+      if (!seenAttempts.has(a.clientId)) {
+        attempts.push(a);
+        seenAttempts.add(a.clientId);
+      }
+    }
+
+    const seenPoints = new Set(points.map((p) => p.dedupeKey));
+    for (const p of input.pointEvents) {
+      if (!seenPoints.has(p.dedupeKey)) {
+        points.push(p);
+        seenPoints.add(p.dedupeKey);
+      }
+    }
+
+    this.learnerAttempts.set(input.userId, attempts);
+    this.learnerPoints.set(input.userId, points);
+
+    return this.project(input.userId, input.timeZone, input.today);
+  }
+
+  async getLearnerState(userId: string, timeZone: string, today?: string): Promise<LearnerState> {
+    return this.project(userId, timeZone, today);
+  }
+
+  private project(userId: string, timeZone: string, today?: string): LearnerState {
+    const attempts = this.learnerAttempts.get(userId) ?? [];
+    const points = this.learnerPoints.get(userId) ?? [];
+
+    // Any genuine activity extends the streak, so both logs count as activity —
+    // not just hitting a goal (docs/10-motivation.md finding 4).
+    const activity = [
+      ...attempts.map((a) => ({ at: a.at })),
+      ...points.map((p) => ({ at: p.at })),
+    ];
+
+    return {
+      streak: projectStreak(activity, timeZone, today),
+      points: projectPoints(points),
+      mastery: projectMastery(attempts),
+      acceptedClientIds: attempts.map((a) => a.clientId),
+      acceptedDedupeKeys: points.map((p) => p.dedupeKey),
+    };
   }
 
   /** Total generation spend. The metric the business model rests on. */

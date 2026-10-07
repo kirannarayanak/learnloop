@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LessonBlock } from '@learnloop/engine/stages/blocks.ts';
 import { useNarration } from '../lib/narration.ts';
-import { useLearner } from '../lib/learner.ts';
+import { useLearner } from '../lib/learner.tsx';
 import {
   Check, Concept, Diagram, ExplainBack, Predict, Pretrain, Recap, WorkedExample,
   type BlockProps,

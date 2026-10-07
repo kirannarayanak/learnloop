@@ -14,10 +14,12 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import type {
   CacheRecord, CitationRecord, DomainRecord, ExerciseRecord, JobKind, JobRecord,
-  LessonForReview, LessonRecord, PathRecord, ReviewDecision, ReviewOutcome,
-  ReviewQueueEntry, ReviewQueueItem, SkillRecord, SourceRecord, Store, VerifyState,
+  LearnerState, LearnerSyncInput, LessonForReview, LessonRecord, PathRecord, ReviewDecision,
+  ReviewOutcome, ReviewQueueEntry, ReviewQueueItem, SkillRecord, SourceRecord, Store,
+  VerifyState,
 } from './types.ts';
 import { evaluatePublishGate } from '../publish/gate.ts';
+import { projectMastery, projectPoints, projectStreak } from '../incentives/project.ts';
 import type { LessonBlock } from '../stages/blocks.ts';
 
 export interface PostgresStoreOptions {
@@ -198,6 +200,32 @@ export class PostgresStore implements Store {
   }
 
   // ============================================================================ content
+
+  async getSkill(skillId: string): Promise<SkillRecord | undefined> {
+    const row = await this.one<SkillRow>(
+      'select id, domain_id, slug, title, statement, est_minutes from skills where id = $1',
+      [skillId],
+    );
+    return row === undefined ? undefined : toSkill(row);
+  }
+
+  async hardPrerequisitesOf(skillId: string): Promise<string[]> {
+    const rows = await this.rows<{ prereq_id: string }>(
+      'select prereq_id from skill_edges where skill_id = $1 and strength >= 0.9 order by prereq_id',
+      [skillId],
+    );
+    return rows.map((r) => r.prereq_id);
+  }
+
+  async getLessonById(lessonId: string): Promise<LessonRecord | undefined> {
+    const row = await this.one<LessonRow>(
+      `select id, skill_id, locale, title, body_md, blocks, est_minutes, gen_model,
+              gen_cost_usd, verify_state, prompt_version
+         from lessons where id = $1`,
+      [lessonId],
+    );
+    return row === undefined ? undefined : toLesson(row);
+  }
 
   async insertLesson(l: Omit<LessonRecord, 'id'>): Promise<LessonRecord> {
     const row = await this.one<LessonRow>(
@@ -470,6 +498,126 @@ export class PostgresStore implements Store {
       reason: (r.notes ?? 'flagged') as ReviewQueueItem['reason'],
       createdAt: r.created_at.toISOString(),
     }));
+  }
+
+  async syncLearner(input: LearnerSyncInput): Promise<LearnerState> {
+    if (input.attempts.length > 0 || input.pointEvents.length > 0) {
+      await this.tx(async (client) => {
+        if (input.attempts.length > 0) {
+          // Union by idempotency key. An outbox IS replayed whenever a device reconnects
+          // mid-flush, so double-counting is the normal case to defend against, not an
+          // edge case.
+          await client.query(
+            `insert into attempts (user_id, skill_id, exercise_id, correct, ms_elapsed, client_id, attempted_at)
+             select $1, s.skill_id, s.exercise_id, s.correct, s.ms_elapsed, s.client_id, s.attempted_at
+               from unnest($2::uuid[], $3::uuid[], $4::boolean[], $5::int[], $6::text[], $7::timestamptz[])
+                 as s(skill_id, exercise_id, correct, ms_elapsed, client_id, attempted_at)
+             on conflict (user_id, client_id) do nothing`,
+            [
+              input.userId,
+              input.attempts.map((a) => a.skillId),
+              input.attempts.map((a) => a.exerciseId),
+              input.attempts.map((a) => a.correct),
+              input.attempts.map((a) => a.msElapsed ?? null),
+              input.attempts.map((a) => a.clientId),
+              input.attempts.map((a) => a.at),
+            ],
+          );
+        }
+
+        if (input.pointEvents.length > 0) {
+          await client.query(
+            `insert into point_events (user_id, kind, points, skill_id, path_id, dedupe_key, created_at)
+             select $1, s.kind, s.points, s.skill_id, s.path_id, s.dedupe_key, s.created_at
+               from unnest($2::text[], $3::int[], $4::uuid[], $5::uuid[], $6::text[], $7::timestamptz[])
+                 as s(kind, points, skill_id, path_id, dedupe_key, created_at)
+             on conflict (user_id, dedupe_key) do nothing`,
+            [
+              input.userId,
+              input.pointEvents.map((p) => p.kind),
+              input.pointEvents.map((p) => p.points),
+              input.pointEvents.map((p) => p.skillId ?? null),
+              input.pointEvents.map((p) => p.pathId ?? null),
+              input.pointEvents.map((p) => p.dedupeKey),
+              input.pointEvents.map((p) => p.at),
+            ],
+          );
+        }
+      });
+    }
+
+    return this.getLearnerState(input.userId, input.timeZone, input.today);
+  }
+
+  async getLearnerState(userId: string, timeZone: string, today?: string): Promise<LearnerState> {
+    const attempts = await this.rows<{ client_id: string; skill_id: string; correct: boolean; attempted_at: Date }>(
+      'select client_id, skill_id, correct, attempted_at from attempts where user_id = $1',
+      [userId],
+    );
+    const points = await this.rows<{ dedupe_key: string; points: number; created_at: Date }>(
+      'select dedupe_key, points, created_at from point_events where user_id = $1',
+      [userId],
+    );
+
+    // Any genuine activity extends the streak, so both logs count — not just hitting a
+    // goal (docs/10-motivation.md finding 4).
+    const activity = [
+      ...attempts.map((a) => ({ at: a.attempted_at.toISOString() })),
+      ...points.map((p) => ({ at: p.created_at.toISOString() })),
+    ];
+
+    const streak = projectStreak(activity, timeZone, today);
+    const mastery = projectMastery(
+      attempts.map((a) => ({ skillId: a.skill_id, correct: a.correct, at: a.attempted_at.toISOString() })),
+    );
+
+    // Materialise the projections so other readers — league standings, cohort dashboards,
+    // the review of a learner's progress — do not each recompute them.
+    await this.persistProjection(userId, streak, mastery);
+
+    return {
+      streak,
+      points: projectPoints(points),
+      mastery,
+      acceptedClientIds: attempts.map((a) => a.client_id),
+      acceptedDedupeKeys: points.map((p) => p.dedupe_key),
+    };
+  }
+
+  private async persistProjection(
+    userId: string,
+    streak: LearnerState['streak'],
+    mastery: LearnerState['mastery'],
+  ): Promise<void> {
+    await this.pool.query(
+      `insert into streaks (user_id, current_days, longest_days, last_active_date, freezes_available, freezes_used, updated_at)
+       values ($1,$2,$3,$4,$5,$6, now())
+       on conflict (user_id) do update set
+         current_days = excluded.current_days,
+         longest_days = excluded.longest_days,
+         last_active_date = excluded.last_active_date,
+         freezes_available = excluded.freezes_available,
+         freezes_used = excluded.freezes_used,
+         updated_at = now()`,
+      [userId, streak.currentDays, streak.longestDays, streak.lastActiveDate,
+       streak.freezesAvailable, streak.freezesUsed],
+    );
+
+    if (mastery.length === 0) return;
+    await this.pool.query(
+      `insert into mastery (user_id, skill_id, state, reps)
+       select $1, s.skill_id, s.state, s.reps
+         from unnest($2::uuid[], $3::text[], $4::int[]) as s(skill_id, state, reps)
+       on conflict (user_id, skill_id) do update set
+         state = excluded.state, reps = excluded.reps`,
+      [
+        userId,
+        mastery.map((m) => m.skillId),
+        // FSRS replaces this stand-in; until then 'review' means credited.
+        mastery.map((m) => (m.mastered ? 'review' : 'learning')),
+        mastery.map((m) => m.attempts),
+      ],
+    );
   }
 
   async listReviewQueueDetailed(): Promise<ReviewQueueEntry[]> {

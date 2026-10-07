@@ -11,7 +11,7 @@ import 'server-only';
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { supabaseEnv } from './config.ts';
+import { supabaseConfigured, supabaseEnv } from './config.ts';
 
 export async function supabaseServer() {
   const { url, anonKey } = supabaseEnv();
@@ -32,8 +32,14 @@ export async function supabaseServer() {
   });
 }
 
-/** The signed-in user, or null. Never throws — callers decide what unauthenticated means. */
+/**
+ * The signed-in user, or null. Never throws — callers decide what unauthenticated means.
+ *
+ * Includes the unconfigured case: without Supabase there is simply nobody signed in, which
+ * callers already handle. Throwing here turned a 401 into a 500 on /api/sync.
+ */
 export async function currentUser() {
+  if (!supabaseConfigured()) return null;
   const supabase = await supabaseServer();
   // getUser() revalidates against the auth server. getSession() reads a cookie the client
   // could have tampered with, so it must not be trusted for an access decision.

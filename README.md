@@ -88,8 +88,10 @@ Row-level security with 22 assertions (`npm run test:rls`) — which found a pri
 escalation and two other holes — plus Supabase auth: emailed sign-in links, a
 reviewer role that cannot be self-assigned, and sessions refreshed in middleware.
 
-Not yet: learner progress sync across devices, org/cohort screens, FSRS, offline service
-worker.
+Progress sync: streak, points and mastery are projections of two append-only logs, so two
+devices merge by union and cannot disagree. Offline-first — everything works signed out.
+
+Not yet: org/cohort screens, FSRS, offline service worker.
 
 **The adapters have not been exercised against the live APIs** — no keys were available
 when they were written, so model ids and Flash pricing need confirming before the first

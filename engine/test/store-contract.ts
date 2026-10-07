@@ -20,6 +20,8 @@ export interface ContractHarness {
   create: () => Promise<Store>;
   /** Seed a domain, since there is no public Store method for it. */
   seedDomain: (store: Store, slug: string, title: string, riskTier: 'low' | 'medium' | 'high') => Promise<string>;
+  /** Seed a learner account. Returns the user id. */
+  seedUser: (store: Store, email: string) => Promise<string>;
   teardown?: () => Promise<void>;
 }
 
@@ -114,6 +116,27 @@ export function runStoreContract(harness: ContractHarness): void {
     await store.insertEdges(edge);
   });
 
+  test(label('hard prerequisites gate credit; soft edges only reorder'), async () => {
+    const store = await harness.create();
+    const domainId = await harness.seedDomain(store, 'd1', 'D', 'low');
+    const skills = await store.insertSkills([
+      { domainId, slug: 'hard', title: 'Hard', statement: 'Do hard', estMinutes: 5 },
+      { domainId, slug: 'soft', title: 'Soft', statement: 'Do soft', estMinutes: 5 },
+      { domainId, slug: 'target', title: 'Target', statement: 'Do target', estMinutes: 5 },
+    ]);
+    const [hard, soft, target] = skills;
+    assert.ok(hard && soft && target);
+
+    await store.insertEdges([
+      { prereqId: hard.id, skillId: target.id, strength: 1 },
+      { prereqId: soft.id, skillId: target.id, strength: 0.5 },
+    ]);
+
+    assert.deepEqual(await store.hardPrerequisitesOf(target.id), [hard.id]);
+    assert.equal((await store.getSkill(target.id))?.slug, 'target');
+    assert.equal(await store.getSkill('00000000-0000-0000-0000-000000000000'), undefined);
+  });
+
   // --- lessons
 
   test(label('a lesson round-trips its blocks and is reusable by prompt version'), async () => {
@@ -136,6 +159,8 @@ export function runStoreContract(harness: ContractHarness): void {
     assert.equal((await store.findLesson(skill.id, 'en', 'v3'))?.id, lesson.id);
     assert.equal(await store.findLesson(skill.id, 'en', 'v4'), undefined, 'a prompt bump must regenerate');
     assert.equal(await store.findLesson(skill.id, 'hi', 'v3'), undefined, 'a different locale is a different lesson');
+    assert.equal((await store.getLessonById(lesson.id))?.title, 'L');
+    assert.equal(await store.getLessonById('00000000-0000-0000-0000-000000000000'), undefined);
   });
 
   test(label('verify state updates, and an unknown lesson throws'), async () => {
@@ -305,6 +330,147 @@ export function runStoreContract(harness: ContractHarness): void {
     // Completed and failed jobs must not be re-leased.
     assert.equal(await store.leaseNext(60_000), undefined);
     await assert.rejects(() => store.completeJob('00000000-0000-0000-0000-000000000000', 0));
+  });
+
+  // --- learner progress sync
+
+  test(label('syncing attempts projects mastery, points and a streak'), async () => {
+    const store = await harness.create();
+    const userId = await harness.seedUser(store, 'sync1@test');
+    const domainId = await harness.seedDomain(store, 'd1', 'D', 'low');
+    const [skill] = await store.insertSkills([
+      { domainId, slug: 's', title: 'S', statement: 'Do S', estMinutes: 5 },
+    ]);
+    assert.ok(skill);
+
+    const state = await store.syncLearner({
+      userId,
+      timeZone: 'UTC',
+      attempts: [
+        { clientId: 'c1', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-01T09:00:00Z' },
+        { clientId: 'c2', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-02T09:00:00Z' },
+        { clientId: 'c3', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-03T09:00:00Z' },
+      ],
+      pointEvents: [
+        { dedupeKey: 'lesson_completed:L1', kind: 'lesson_completed', points: 10, at: '2026-10-01T09:00:00Z' },
+      ],
+      today: '2026-10-03',
+    });
+
+    assert.equal(state.points, 10);
+    assert.equal(state.streak.currentDays, 3);
+    assert.equal(state.mastery[0]?.mastered, true, 'three correct credits the skill');
+    assert.equal(state.acceptedClientIds.length, 3);
+  });
+
+  // An outbox IS replayed whenever a device reconnects mid-flush, so this is the normal
+  // case to defend against, not an edge case.
+  test(label('re-syncing the same payload changes nothing'), async () => {
+    const store = await harness.create();
+    const userId = await harness.seedUser(store, 'sync2@test');
+    const domainId = await harness.seedDomain(store, 'd1', 'D', 'low');
+    const [skill] = await store.insertSkills([
+      { domainId, slug: 's', title: 'S', statement: 'Do S', estMinutes: 5 },
+    ]);
+    assert.ok(skill);
+
+    const payload = {
+      userId,
+      timeZone: 'UTC',
+      attempts: [
+        { clientId: 'c1', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-01T09:00:00Z' },
+      ],
+      pointEvents: [
+        { dedupeKey: 'lesson_completed:L1', kind: 'lesson_completed', points: 10, at: '2026-10-01T09:00:00Z' },
+      ],
+      today: '2026-10-01',
+    };
+
+    const first = await store.syncLearner(payload);
+    const second = await store.syncLearner(payload);
+    const third = await store.syncLearner(payload);
+
+    assert.equal(first.points, 10);
+    assert.equal(second.points, 10, 'a replayed point event must not double-count');
+    assert.equal(third.acceptedClientIds.length, 1, 'a replayed attempt must not duplicate');
+  });
+
+  // The point of projecting rather than storing: two devices cannot disagree.
+  test(label('two devices merge by union, whichever syncs first'), async () => {
+    const store = await harness.create();
+    const userId = await harness.seedUser(store, 'sync3@test');
+    const domainId = await harness.seedDomain(store, 'd1', 'D', 'low');
+    const [skill] = await store.insertSkills([
+      { domainId, slug: 's', title: 'S', statement: 'Do S', estMinutes: 5 },
+    ]);
+    assert.ok(skill);
+
+    // Phone: Monday and Tuesday. Laptop: Wednesday. Neither knows about the other.
+    await store.syncLearner({
+      userId, timeZone: 'UTC', today: '2026-10-03',
+      attempts: [
+        { clientId: 'phone-1', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-01T09:00:00Z' },
+        { clientId: 'phone-2', skillId: skill.id, exerciseId: null, correct: false, at: '2026-10-02T09:00:00Z' },
+      ],
+      pointEvents: [{ dedupeKey: 'a', kind: 'lesson_completed', points: 10, at: '2026-10-01T09:00:00Z' }],
+    });
+
+    const merged = await store.syncLearner({
+      userId, timeZone: 'UTC', today: '2026-10-03',
+      attempts: [
+        { clientId: 'laptop-1', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-03T09:00:00Z' },
+      ],
+      pointEvents: [{ dedupeKey: 'b', kind: 'review_completed', points: 15, at: '2026-10-03T09:00:00Z' }],
+    });
+
+    assert.equal(merged.points, 25, "both devices' points");
+    assert.equal(merged.streak.currentDays, 3, 'a three-day streak nobody device could see alone');
+    assert.equal(merged.mastery[0]?.attempts, 3);
+    assert.equal(merged.acceptedClientIds.length, 3);
+  });
+
+  test(label('a fresh device reads state without pushing anything'), async () => {
+    const store = await harness.create();
+    const userId = await harness.seedUser(store, 'sync4@test');
+    const domainId = await harness.seedDomain(store, 'd1', 'D', 'low');
+    const [skill] = await store.insertSkills([
+      { domainId, slug: 's', title: 'S', statement: 'Do S', estMinutes: 5 },
+    ]);
+    assert.ok(skill);
+
+    await store.syncLearner({
+      userId, timeZone: 'UTC', today: '2026-10-01',
+      attempts: [{ clientId: 'c1', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-01T09:00:00Z' }],
+      pointEvents: [{ dedupeKey: 'a', kind: 'lesson_completed', points: 10, at: '2026-10-01T09:00:00Z' }],
+    });
+
+    // Signing in on a new device must show the streak that already exists.
+    const pulled = await store.getLearnerState(userId, 'UTC', '2026-10-01');
+    assert.equal(pulled.points, 10);
+    assert.equal(pulled.streak.currentDays, 1);
+    assert.equal(pulled.mastery.length, 1);
+  });
+
+  test(label("one learner never sees another's progress"), async () => {
+    const store = await harness.create();
+    const alice = await harness.seedUser(store, 'alice-sync@test');
+    const bob = await harness.seedUser(store, 'bob-sync@test');
+    const domainId = await harness.seedDomain(store, 'd1', 'D', 'low');
+    const [skill] = await store.insertSkills([
+      { domainId, slug: 's', title: 'S', statement: 'Do S', estMinutes: 5 },
+    ]);
+    assert.ok(skill);
+
+    await store.syncLearner({
+      userId: alice, timeZone: 'UTC', today: '2026-10-01',
+      attempts: [{ clientId: 'a1', skillId: skill.id, exerciseId: null, correct: true, at: '2026-10-01T09:00:00Z' }],
+      pointEvents: [{ dedupeKey: 'a', kind: 'lesson_completed', points: 10, at: '2026-10-01T09:00:00Z' }],
+    });
+
+    const bobState = await store.getLearnerState(bob, 'UTC', '2026-10-01');
+    assert.equal(bobState.points, 0);
+    assert.equal(bobState.mastery.length, 0);
+    assert.equal(bobState.streak.currentDays, 0);
   });
 
   // --- human review

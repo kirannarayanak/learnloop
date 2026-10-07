@@ -16,7 +16,7 @@
 
 import { useState } from 'react';
 import type { Exercise } from '../lib/content.ts';
-import { useLearner } from '../lib/learner.ts';
+import { useLearner } from '../lib/learner.tsx';
 import { Markdown } from './Markdown.tsx';
 
 const OPTION_COUNT = 3;
@@ -51,6 +51,7 @@ export function Practice({ exercises, skillId }: { exercises: Exercise[]; skillI
   }
 
   const answered = picked !== null;
+  const exerciseId = exercise.id;
   const correctIndex = exercise.answer.correct;
   const wasCorrect = picked === correctIndex;
   const progress = progressOf(skillId);
@@ -58,7 +59,7 @@ export function Practice({ exercises, skillId }: { exercises: Exercise[]; skillI
   function choose(option: number): void {
     if (answered) return;
     setPicked(option);
-    recordAttempt(skillId, option === correctIndex);
+    recordAttempt(skillId, option === correctIndex, exerciseId);
   }
 
   return (

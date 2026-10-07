@@ -14,6 +14,7 @@
     "generate": "npm run generate --workspace @learnloop/engine --",
     "eval": "npm run eval --workspace @learnloop/engine --",
     "migrate": "npm run migrate --workspace @learnloop/engine --",
-    "test:rls": "docker exec -i learnloop-pg psql -U postgres -d learnloop -v ON_ERROR_STOP=1 < db/test/rls.sql"
+    "test:rls": "docker exec -i learnloop-pg psql -U postgres -d learnloop -v ON_ERROR_STOP=1 < db/test/rls.sql",
+    "db:test:setup": "docker exec learnloop-pg psql -U postgres -c \"create database learnloop_test\" || true"
   }
 }

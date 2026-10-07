@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useLearner } from '../lib/learner.ts';
+import { useLearner } from '../lib/learner.tsx';
 
 /**
  * Credits reading the lesson, which also extends the streak — any genuine activity

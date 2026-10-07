@@ -79,15 +79,30 @@ it is safe to run without keys. With keys it prints a cost estimate and asks bef
 spending. Prompts live in `engine/stages/prompts.ts` — that file, not the model choice, is
 what decides whether a lesson teaches.
 
+## Progress sync
+Learner state is **offline-first**: localStorage is the primary writer and every action
+works signed out. Streak, points and mastery are **projections** of two append-only logs
+(`attempts`, `point_events`), computed by the same pure functions on client and server
+(`engine/incentives/project.ts`).
+
+- **Never sync a derived counter.** Two devices would need a conflict policy and every
+  policy is wrong somewhere: last-write-wins loses a day, max() rewards clock skew.
+  Syncing the logs and deriving avoids the question entirely.
+- Idempotency keys (`attempts.client_id`, `point_events.dedupe_key`) make a replayed
+  outbox safe — and an outbox IS replayed whenever a device reconnects mid-flush.
+- `/api/sync` takes the user id from the session, **never from the body**.
+- Streaks use the learner's timezone, not UTC. Getting that wrong breaks the streak of
+  exactly the learners furthest from UTC, which here is most of them.
+
 ## Database
 ```
 docker compose up -d
 export DATABASE_URL=postgres://postgres:learnloop@localhost:55432/learnloop
 npm run migrate
 ```
-With `DATABASE_URL` set, the Store contract suite also runs against Postgres and the
-generate CLI persists there. Without it everything falls back to `MemoryStore` and the
-Postgres tests skip.
+`DATABASE_URL` is the database you develop against. `TEST_DATABASE_URL` is a **separate
+throwaway** one for the contract suite, which TRUNCATES every table it touches — pointing
+both at the same database destroys your content, and the suite refuses if you try.
 
 **Migrations are forward-only, including `db/schema.sql`.** `migrate.ts` hashes every
 applied file and fails on drift, so never edit one that has run — add a new migration and

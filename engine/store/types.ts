@@ -154,6 +154,60 @@ export interface LessonForReview {
   pathId: string | null;
 }
 
+// ============================================================= learner progress sync
+
+/** One recorded attempt. `clientId` is the idempotency key that makes replay safe. */
+export interface SyncAttempt {
+  clientId: string;
+  skillId: string;
+  /** Null when the question has since been regenerated away. See migration 010. */
+  exerciseId: string | null;
+  correct: boolean;
+  at: string;
+  msElapsed?: number;
+}
+
+export interface SyncPointEvent {
+  dedupeKey: string;
+  kind: string;
+  points: number;
+  skillId?: string;
+  pathId?: string;
+  at: string;
+}
+
+export interface LearnerSyncInput {
+  userId: string;
+  /** The learner's timezone. Streaks follow their day, not UTC. */
+  timeZone: string;
+  attempts: SyncAttempt[];
+  pointEvents: SyncPointEvent[];
+  /** Their local date, so a lapsed streak reads as lapsed. */
+  today?: string;
+}
+
+/**
+ * Learner state, projected from the logs.
+ *
+ * Nothing here is stored state two devices could disagree about — it is all a function of
+ * append-only rows, so merging is a union and the projection of a union is order
+ * independent (engine/incentives/project.ts).
+ */
+export interface LearnerState {
+  streak: {
+    currentDays: number;
+    longestDays: number;
+    lastActiveDate: string | null;
+    freezesAvailable: number;
+    freezesUsed: number;
+  };
+  points: number;
+  mastery: { skillId: string; attempts: number; correct: number; mastered: boolean }[];
+  /** What the server now holds, so the client can prune its outbox. */
+  acceptedClientIds: string[];
+  acceptedDedupeKeys: string[];
+}
+
 export type ReviewVerdict = 'approve' | 'reject' | 'needs_edit';
 
 export interface ReviewDecision {
@@ -186,6 +240,9 @@ export interface Store {
   /** Near-duplicate detection via embedding cosine. Returns an existing skill to reuse. */
   findSimilarSkill(domainId: string, statement: string): Promise<SkillRecord | undefined>;
   insertEdges(edges: { prereqId: string; skillId: string; strength: number }[]): Promise<void>;
+  getSkill(skillId: string): Promise<SkillRecord | undefined>;
+  /** Prerequisites that gate CREDIT (strength >= 0.9), never access. */
+  hardPrerequisitesOf(skillId: string): Promise<string[]>;
 
   // --- content
   insertLesson(l: Omit<LessonRecord, 'id'>): Promise<LessonRecord>;
@@ -194,6 +251,7 @@ export interface Store {
   findLesson(
     skillId: string, locale: string, promptVersion: string,
   ): Promise<LessonRecord | undefined>;
+  getLessonById(lessonId: string): Promise<LessonRecord | undefined>;
   updateLessonVerifyState(lessonId: string, state: VerifyState): Promise<void>;
   insertExercises(ex: Omit<ExerciseRecord, 'id'>[]): Promise<ExerciseRecord[]>;
   insertCitations(c: CitationRecord[]): Promise<void>;
@@ -234,4 +292,10 @@ export interface Store {
    * answerable (docs/07-risks.md).
    */
   recordReview(decision: ReviewDecision): Promise<ReviewOutcome>;
+
+  // --- learner progress
+  /** Push queued activity and get the merged state back. Idempotent by construction. */
+  syncLearner(input: LearnerSyncInput): Promise<LearnerState>;
+  /** Read-only projection, for a fresh device that has nothing to push. */
+  getLearnerState(userId: string, timeZone: string, today?: string): Promise<LearnerState>;
 }

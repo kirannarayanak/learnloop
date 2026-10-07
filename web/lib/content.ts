@@ -1,22 +1,27 @@
+import 'server-only';
+
 /**
  * Content access.
  *
- * Wave 0 reads a snapshot produced by the real pipeline (`cd engine && npm run seed`).
- * This module is the seam: when Supabase exists, these functions query Postgres and
- * nothing above them changes. The app never talks to the engine directly — in
- * production the engine is a worker, not a dependency of the web request path
- * (docs/02-architecture.md).
+ * Reads Postgres when `DATABASE_URL` is set, and the generated snapshot otherwise. The
+ * snapshot is not a mock — it is produced by the real pipeline (`npm run seed`) — but its
+ * ids are in-memory ids, so **learner progress cannot sync against it**: an attempt would
+ * reference a skill that does not exist. Which source is in use therefore decides whether
+ * signing in can do anything, and `canSyncProgress()` is how the UI knows.
+ *
+ * Published, non-org paths are readable by anon under RLS, so the public reads here are
+ * safe to serve to a signed-out visitor.
  */
 
-import type { LessonBlock } from '@learnloop/engine/stages/blocks.ts';
+import { reviewStore, databaseConfigured } from './review-store.ts';
 import seed from './seed.json';
+import type { LessonBlock } from '@learnloop/engine/stages/blocks.ts';
 
 export type RiskTier = 'low' | 'medium' | 'high';
 
 export interface PathItem {
   skillId: string;
   skillTitle: string;
-  /** The observable "can do X" this item is responsible for. */
   statement: string;
   estMinutes: number;
   lessonId: string;
@@ -41,14 +46,11 @@ export interface Lesson {
   id: string;
   skillId: string;
   title: string;
-  /** Plain-text fallback; the real lesson is `blocks`. */
   bodyMd: string;
-  /** The lesson proper — see engine/stages/blocks.ts and docs/11-lesson-design.md. */
   blocks: LessonBlock[];
   estMinutes: number;
   verifyState: string;
   genModel: string;
-  /** Shown to the learner. Provenance is the reason to trust the lesson. */
   citations: { quote: string }[];
   sampledForReview: boolean;
 }
@@ -58,7 +60,6 @@ export interface Exercise {
   kind: string;
   promptMd: string;
   answer: { correct: number };
-  /** Shown whether the learner was right or wrong. */
   explanationMd: string;
   difficulty: number;
 }
@@ -83,27 +84,109 @@ interface Snapshot {
 
 const snapshot = seed as unknown as Snapshot;
 
-export function allPaths(): LearningPath[] {
-  return snapshot.paths;
+/**
+ * Whether progress can be synced to an account.
+ *
+ * False against the snapshot, because its ids are in-memory ids with no rows behind them.
+ * The UI uses this to avoid promising that signing in will keep a streak when it cannot.
+ */
+export function canSyncProgress(): boolean {
+  return databaseConfigured();
 }
 
-export function pathBySlug(slug: string): LearningPath | undefined {
-  return snapshot.paths.find((p) => p.slug === slug);
+// ============================================================================ from the DB
+
+async function pathsFromDb(): Promise<LearningPath[]> {
+  const store = reviewStore();
+  const paths = await store.listPublishedPaths();
+
+  return Promise.all(
+    paths.map(async (p) => {
+      const domain = await store.getDomain(p.domainId);
+      const lessons = await store.getLessonsForPath(p.id);
+
+      const items: PathItem[] = [];
+      for (const skillId of p.itemSkillIds) {
+        const lesson = lessons.find((l) => l.skillId === skillId);
+        if (lesson === undefined) continue;
+        const skill = await store.getSkill(skillId);
+        const exercises = await store.getExercisesForLesson(lesson.id);
+        items.push({
+          skillId,
+          skillTitle: skill?.title ?? lesson.title,
+          statement: skill?.statement ?? '',
+          estMinutes: skill?.estMinutes ?? lesson.estMinutes,
+          lessonId: lesson.id,
+          exerciseCount: exercises.length,
+          hardPrereqs: await store.hardPrerequisitesOf(skillId),
+        });
+      }
+
+      return {
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        summary: p.summary,
+        domainSlug: domain?.slug ?? '',
+        domainTitle: domain?.title ?? '',
+        riskTier: domain?.riskTier ?? 'low',
+        sourceUri: '',
+        items,
+      };
+    }),
+  );
 }
 
-export function lesson(lessonId: string): Lesson | undefined {
-  return snapshot.lessons[lessonId];
+// ================================================================================= public
+
+export async function allPaths(): Promise<LearningPath[]> {
+  return canSyncProgress() ? pathsFromDb() : snapshot.paths;
 }
 
-export function exercisesFor(lessonId: string): Exercise[] {
-  return snapshot.exercises[lessonId] ?? [];
+export async function pathBySlug(slug: string): Promise<LearningPath | undefined> {
+  return (await allPaths()).find((p) => p.slug === slug);
+}
+
+export async function lesson(lessonId: string): Promise<Lesson | undefined> {
+  if (!canSyncProgress()) return snapshot.lessons[lessonId];
+
+  const store = reviewStore();
+  const record = await store.getLessonById(lessonId);
+  if (record === undefined) return undefined;
+  const citations = await store.getCitations(lessonId);
+
+  return {
+    id: record.id,
+    skillId: record.skillId,
+    title: record.title,
+    bodyMd: record.bodyMd,
+    blocks: record.blocks,
+    estMinutes: record.estMinutes,
+    verifyState: record.verifyState,
+    genModel: record.genModel,
+    citations: citations.map((c) => ({ quote: c.quote })),
+    sampledForReview: false,
+  };
+}
+
+export async function exercisesFor(lessonId: string): Promise<Exercise[]> {
+  if (!canSyncProgress()) return snapshot.exercises[lessonId] ?? [];
+  const records = await reviewStore().getExercisesForLesson(lessonId);
+  return records.map((e) => ({
+    id: e.id,
+    kind: e.kind,
+    promptMd: e.promptMd,
+    answer: e.answer as { correct: number },
+    explanationMd: e.explanationMd,
+    difficulty: e.difficulty,
+  }));
 }
 
 /** The path and item a lesson belongs to, for prev/next navigation. */
-export function locate(lessonId: string):
-  | { path: LearningPath; index: number; item: PathItem }
-  | undefined {
-  for (const p of snapshot.paths) {
+export async function locate(
+  lessonId: string,
+): Promise<{ path: LearningPath; index: number; item: PathItem } | undefined> {
+  for (const p of await allPaths()) {
     const index = p.items.findIndex((i) => i.lessonId === lessonId);
     const item = p.items[index];
     if (index !== -1 && item !== undefined) return { path: p, index, item };
@@ -112,14 +195,39 @@ export function locate(lessonId: string):
 }
 
 /** Content blocked by the publish gate. Surfaced honestly rather than hidden. */
-export function pendingReview(): PendingReview[] {
-  return snapshot.pendingReview;
+export async function pendingReview(): Promise<PendingReview[]> {
+  if (!canSyncProgress()) return snapshot.pendingReview;
+  const queue = await reviewStore().listReviewQueueDetailed();
+  const byPath = new Map<string, PendingReview>();
+  for (const item of queue) {
+    const existing = byPath.get(item.domainTitle);
+    if (existing === undefined) {
+      byPath.set(item.domainTitle, {
+        title: item.lessonTitle,
+        domainTitle: item.domainTitle,
+        riskTier: item.riskTier,
+        lessonCount: 1,
+        reason: item.reason,
+      });
+    } else {
+      existing.lessonCount += 1;
+    }
+  }
+  return [...byPath.values()];
 }
 
-export function snapshotMeta(): { generatedAt: string; costUsd: number; reviewQueueSize: number } {
-  return {
-    generatedAt: snapshot.generatedAt,
-    costUsd: snapshot.costUsd,
-    reviewQueueSize: snapshot.reviewQueueSize,
-  };
+export async function snapshotMeta(): Promise<{
+  generatedAt: string;
+  costUsd: number;
+  reviewQueueSize: number;
+}> {
+  if (!canSyncProgress()) {
+    return {
+      generatedAt: snapshot.generatedAt,
+      costUsd: snapshot.costUsd,
+      reviewQueueSize: snapshot.reviewQueueSize,
+    };
+  }
+  const queue = await reviewStore().listReviewQueueDetailed();
+  return { generatedAt: new Date().toISOString(), costUsd: 0, reviewQueueSize: queue.length };
 }

@@ -10,11 +10,11 @@
  */
 
 import Link from 'next/link';
-import { useLearner } from '../lib/learner.ts';
+import { useLearner } from '../lib/learner.tsx';
 
 export function Header() {
-  const { state, points, loaded } = useLearner();
-  const { currentDays, longestDays, freezesAvailable } = state.streak;
+  const { streak, points, loaded, pending, syncState } = useLearner();
+  const { currentDays, longestDays, freezesAvailable } = streak;
 
   return (
     <header className="flex items-center justify-between gap-4 border-b border-border py-4">
@@ -50,6 +50,13 @@ export function Header() {
           {longestDays > currentDays && (
             <span className="hidden text-ink-soft sm:inline" title="Your personal best">
               best {longestDays}
+            </span>
+          )}
+
+          {/* Honest about where progress lives. Silence here would imply it is saved. */}
+          {syncState !== 'off' && pending > 0 && (
+            <span className="text-ink-soft" title={`${pending} item(s) not yet saved to your account`}>
+              <span aria-hidden>↑</span> {pending}
             </span>
           )}
         </div>

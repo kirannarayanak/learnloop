@@ -5,14 +5,15 @@ import { LessonPlayer } from '../../../components/LessonPlayer.tsx';
 import { MarkRead } from '../../../components/MarkRead.tsx';
 import { lesson, locate } from '../../../lib/content.ts';
 
+export const dynamic = 'force-dynamic';
+
 export default async function LessonPage({
   params,
 }: {
   params: Promise<{ lessonId: string }>;
 }) {
   const { lessonId } = await params;
-  const l = lesson(lessonId);
-  const where = locate(lessonId);
+  const [l, where] = await Promise.all([lesson(lessonId), locate(lessonId)]);
   if (l === undefined || where === undefined) notFound();
 
   const next = where.path.items[where.index + 1];

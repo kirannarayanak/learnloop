@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { LearnerProvider } from '../lib/learner.tsx';
+import { canSyncProgress } from '../lib/content.ts';
 
 export const metadata: Metadata = {
   title: 'LearnLoop',
@@ -17,7 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-dvh antialiased">
-        <div className="mx-auto max-w-3xl px-4 pb-24">{children}</div>
+        {/* One owner for learner state. Without it each component held its own copy and
+            the header's points went stale the moment you answered a question. */}
+        <LearnerProvider syncEnabled={canSyncProgress()}>
+          <div className="mx-auto max-w-3xl px-4 pb-24">{children}</div>
+        </LearnerProvider>
       </body>
     </html>
   );

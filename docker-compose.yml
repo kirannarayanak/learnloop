@@ -14,6 +14,9 @@ services:
     environment:
       POSTGRES_PASSWORD: learnloop
       POSTGRES_DB: learnloop
+      # A second, throwaway database for the contract suite, which truncates everything
+      # it touches. Keeping it separate is why `npm test` cannot eat your dev content.
+      POSTGRES_MULTIPLE_DATABASES: learnloop_test
     ports:
       - '55432:5432'
     healthcheck:

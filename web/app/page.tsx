@@ -8,10 +8,12 @@ const RISK_LABEL: Record<string, string> = {
   high: 'Human approval required',
 };
 
-export default function Home() {
-  const paths = allPaths();
-  const pending = pendingReview();
-  const meta = snapshotMeta();
+// Content changes whenever a reviewer approves something, so this cannot be baked at
+// build time once it is reading the database.
+export const dynamic = 'force-dynamic';
+
+export default async function Home() {
+  const [paths, pending, meta] = await Promise.all([allPaths(), pendingReview(), snapshotMeta()]);
 
   return (
     <main>

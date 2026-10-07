@@ -2,15 +2,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Header } from '../../../components/Header.tsx';
 import { SkillMap } from '../../../components/SkillMap.tsx';
-import { allPaths, pathBySlug } from '../../../lib/content.ts';
+import { pathBySlug } from '../../../lib/content.ts';
 
-export function generateStaticParams() {
-  return allPaths().map((p) => ({ slug: p.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 export default async function PathPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const path = pathBySlug(slug);
+  const path = await pathBySlug(slug);
   if (path === undefined) notFound();
 
   return (

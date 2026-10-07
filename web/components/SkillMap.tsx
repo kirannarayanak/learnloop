@@ -15,10 +15,10 @@
 
 import Link from 'next/link';
 import type { PathItem } from '../lib/content.ts';
-import { useLearner } from '../lib/learner.ts';
+import { useLearner } from '../lib/learner.tsx';
 
 export function SkillMap({ items }: { items: PathItem[] }) {
-  const { isMastered, progressOf, loaded, state } = useLearner();
+  const { isMastered, progressOf, loaded, lessonsRead } = useLearner();
 
   const titleOf = (skillId: string) =>
     items.find((i) => i.skillId === skillId)?.skillTitle ?? 'an earlier skill';
@@ -39,7 +39,7 @@ export function SkillMap({ items }: { items: PathItem[] }) {
         {items.map((item, i) => {
           const mastered = isMastered(item.skillId);
           const progress = progressOf(item.skillId);
-          const read = state.lessonsRead.includes(item.lessonId);
+          const read = lessonsRead.includes(item.lessonId);
 
           // Hard prerequisites not yet credited. Advisory only.
           const missing = item.hardPrereqs.filter((id) => !isMastered(id));
