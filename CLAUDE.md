@@ -28,7 +28,13 @@ to a different family on purpose. Embeddings are always an open model.
   own output shares its own blind spots and will approve its own hallucinations.
   `assertVerifierIndependence()` throws at startup; don't catch it, fix the routing.
 - **Never name a model outside `engine/providers/routing.ts`.** Stages take a `ModelRef`.
-- **Multi-tenant isolation is RLS, not `WHERE org_id = ?`.** Policies in `db/policies.sql`.
+- **Multi-tenant isolation is RLS, not `WHERE org_id = ?`.** Policies in
+  `db/migrations/006-rls.sql`, assertions in `db/test/rls.sql` (`npm run test:rls`).
+  Run them after touching a policy — policies are security code, and two real
+  vulnerabilities were found by these assertions, not by review.
+- **Never `grant <privilege> on <table>` where a column-level grant will do.** A
+  table-level `GRANT UPDATE` is NOT narrowed by a later column-level `REVOKE`; that
+  silently reopened a privilege escalation (migration 007).
 - **`sources.license` null ⇒ cite and link only, never reproduce.** Legal gate, in code.
 - **Never award points for correct answers.** Points reward effort and consistency only.
   Rewarding correctness punishes struggling learners and drives avoidance of hard material
