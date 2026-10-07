@@ -12,19 +12,35 @@ Dates assume a start of 2026-10-07 and real-life part-time pace. Slip the dates,
 **Goal: one source in, one finishable path out, 50 real learners.**
 
 Build:
-- `engine/` pipeline end to end, ingest → publish, for **one low-risk domain only**
-  (see `01-vision.md` wave 0: new tech for working developers).
+- `engine/` pipeline end to end, ingest → publish, across **all four seeded domains**
+  (`db/seed/01-domains.sql` — see the reasoning and accepted cost in `00-decisions.md`).
 - `db/schema.sql` applied; the five job kinds running off `generation_jobs`.
+- **The risk gate, working, on day one.** `publish_lesson()` must refuse a high-risk lesson
+  that is only `auto_passed`. This has a test before any K-12 content is generated.
+- **The human review queue**, because `exam-prep` and `school-curriculum` need it immediately.
+  Minimal: a list, a diff, approve/reject. It does not need to be pretty.
 - A deliberately plain web app: path list → lesson → exercise → next. No dashboard, no
   profile page, no settings.
 - FSRS review queue.
 - The flag button. From the very first lesson.
+- **Per-domain funnel instrumentation** — starts, completions and flags broken out by domain.
+  This is the instrument that decides where to concentrate; without it, four domains is just
+  four guesses.
 
 Do **not** build: auth beyond magic-link, payments, offline, i18n, orgs, tutor, certificates.
 
-**Exit gate:** 50 learners start a path; **≥35% finish it**; **<2% of items flagged as wrong**.
-If completion is under 20%, the problem is the content or the item size — fix that and
-re-measure. Do not proceed on a broken loop.
+**Also in wave 0 now, because K-12 is in scope:** settle the minors data-protection policy
+(COPPA / GDPR-K / DPDP). No school cohort is onboarded before it exists. This moved up from
+wave 3 as a direct consequence of the four-domain decision.
+
+**Exit gate:** 50 learners start a path; **≥35% finish it**; **<2% of items flagged as wrong**;
+and **zero high-risk lessons published without human approval** (this one is binary — a single
+breach means the gate is broken, stop and fix it).
+
+Measure the first three **per domain**. If attention splits four ways and no single domain
+reaches 50 learners, collapse to the best performer — that is the expected failure mode of
+this decision and the one to watch for. If completion is under 20% everywhere, the problem is
+content quality or item size, not distribution. Do not proceed on a broken loop.
 
 ---
 

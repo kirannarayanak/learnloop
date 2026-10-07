@@ -21,6 +21,7 @@ Read the thinking in order:
 
 | Doc | What's in it |
 | --- | --- |
+| [docs/00-decisions.md](docs/00-decisions.md) | Decisions log — what was chosen, when, and the accepted cost |
 | [docs/01-vision.md](docs/01-vision.md) | The gap, the wedge, who we serve first, what we refuse to build |
 | [docs/02-architecture.md](docs/02-architecture.md) | Stack on free tiers + OSS, with an escape hatch per choice |
 | [docs/03-data-model.md](docs/03-data-model.md) | Why skills are primary and paths are routes |
@@ -40,8 +41,8 @@ docs/     the thinking, kept in the repo on purpose
 
 ## Status
 
-**Pre-wave-0.** The schema and the plan exist; the pipeline does not yet. Next commit is the
-wave-0 vertical slice: one source in, one finishable path out.
+**Pre-wave-0.** The schema, the risk gate and the plan exist; the pipeline does not yet.
+Next commit is the wave-0 vertical slice: one source in, one finishable path out.
 
 ## Non-negotiables
 
@@ -56,4 +57,7 @@ These are constraints, not preferences, and they're enforced in code rather than
 
 ## Licence
 
-Core: AGPL-3.0 (planned, on wave-0 completion). Hosted org/cohort layer: proprietary.
+Core: **AGPL-3.0** — see [LICENSE](LICENSE). Hosted org/cohort layer: proprietary.
+
+Contributions welcome. The highest-value contribution is not code — it is reviewing generated
+content in a domain you actually know, and telling us where the engine is wrong.

@@ -28,6 +28,11 @@ create table domains (
   slug        text unique not null,
   title       text not null,
   description text,
+  -- Risk tier decides what auto-verification is ALLOWED to publish.
+  -- 'high' => human_approved required, enforced by publish_lesson() below.
+  -- See docs/04-content-pipeline.md and docs/07-risks.md.
+  risk_tier   text not null default 'low'
+              check (risk_tier in ('low','medium','high')),
   parent_id   uuid references domains(id) on delete set null
 );
 
@@ -305,3 +310,36 @@ create table path_bundles (
   built_at   timestamptz not null default now(),
   primary key (path_id, locale)
 );
+
+-- ============================================================= publish gate
+-- The rule from docs/07-risks.md lives HERE, in one place, as code:
+-- a high-risk domain cannot publish on auto-verification alone. Every publish
+-- path must go through this function. Do not inline the UPDATE anywhere else.
+create or replace function publish_lesson(p_lesson_id uuid)
+returns void
+language plpgsql
+as $$
+declare
+  v_tier  text;
+  v_state text;
+begin
+  select d.risk_tier, l.verify_state
+    into strict v_tier, v_state
+    from lessons l
+    join skills  s on s.id = l.skill_id
+    join domains d on d.id = s.domain_id
+   where l.id = p_lesson_id;
+
+  if v_state not in ('auto_passed', 'human_approved') then
+    raise exception 'lesson % is %, not verified; refusing to publish',
+      p_lesson_id, v_state;
+  end if;
+
+  if v_tier = 'high' and v_state <> 'human_approved' then
+    raise exception 'lesson % is in a high-risk domain and needs human approval (is: %)',
+      p_lesson_id, v_state;
+  end if;
+
+  update lessons set updated_at = now() where id = p_lesson_id;
+end;
+$$;
