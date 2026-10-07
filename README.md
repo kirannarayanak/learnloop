@@ -32,6 +32,14 @@ Read the thinking in order:
 | [docs/09-model-strategy.md](docs/09-model-strategy.md) | Which model per stage, open vs. hosted, why not fine-tuning |
 | [docs/10-motivation.md](docs/10-motivation.md) | Structure and incentives, from the evidence — and what the evidence says not to build |
 
+## Run it
+
+```
+npm install
+npm run dev     # seeds content from the pipeline, serves on http://localhost:3310
+npm test        # 42 tests, no API key and no network needed
+```
+
 ## Repo layout
 
 ```
@@ -43,13 +51,19 @@ docs/     the thinking, kept in the repo on purpose
 
 ## Status
 
-**Wave 0, in progress.**
+**Wave 0 — the vertical slice is closed.** A source goes in, a verified path comes out, and
+the app renders it. 42 tests, no API key or network required.
 
-Done: schema + incentives, the provider adapter, the prerequisite-DAG validator, the publish
-gate, and the streak/points logic — typechecked strict and covered by 29 tests.
+Working: the full pipeline (ingest → graph → draft → verify → publish), the prerequisite-DAG
+validator, the publish gate, the generation cache and cost accounting, the streak/points
+rules, and a learner app showing the skill map, lesson provenance and practice.
 
-Next: the pipeline stages themselves (ingest → graph → draft → verify orchestration), the
-human review queue, and the learner-facing PWA in `web/`.
+Not yet: real model adapters (the interface exists, the HTTP calls don't), the Postgres
+store, the human review UI, FSRS, offline service worker, auth.
+
+**Nothing has run against a real model yet.** The fake provider proves the plumbing, the
+gate and the economics — never content quality. That is what the eval set is for
+([docs/09-model-strategy.md](docs/09-model-strategy.md)).
 
 ## Non-negotiables
 
