@@ -8,6 +8,7 @@
  * (docs/02-architecture.md).
  */
 
+import type { LessonBlock } from '@learnloop/engine/stages/blocks.ts';
 import seed from './seed.json';
 
 export type RiskTier = 'low' | 'medium' | 'high';
@@ -40,7 +41,10 @@ export interface Lesson {
   id: string;
   skillId: string;
   title: string;
+  /** Plain-text fallback; the real lesson is `blocks`. */
   bodyMd: string;
+  /** The lesson proper — see engine/stages/blocks.ts and docs/11-lesson-design.md. */
+  blocks: LessonBlock[];
   estMinutes: number;
   verifyState: string;
   genModel: string;

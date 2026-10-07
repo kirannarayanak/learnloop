@@ -18,6 +18,7 @@ import { evaluatePublishGate, type LessonForPublish, type Refusal } from './publ
 import { generateCached, newStats, type CacheStats } from './cache/content-cache.ts';
 import { assertVerifierIndependence, routing } from './providers/routing.ts';
 import type { Provider } from './providers/types.ts';
+import { validateLessonStructure } from './stages/blocks.ts';
 import {
   assertSkillStatements,
   PROMPT_VERSION,
@@ -221,11 +222,24 @@ export async function runPipeline(
     );
     const draft = drafted.output;
 
+    // A model asked for a "rich lesson" will happily return eight concept blocks in a
+    // row, which is a wall of text in a costume. These checks encode
+    // docs/11-lesson-design.md: retrieval woven through, at least one constructive
+    // block, and narration that does not restate the screen.
+    const structureProblems = validateLessonStructure(draft.blocks);
+    if (structureProblems.length > 0) {
+      throw new Error(
+        `lesson for skill '${slug}' is structurally unsound, refusing to draft it: ` +
+          structureProblems.map((pb) => `[${pb.code}] ${pb.detail}`).join('; '),
+      );
+    }
+
     const lesson = await store.insertLesson({
       skillId,
       locale,
       title: draft.title,
       bodyMd: draft.bodyMd,
+      blocks: draft.blocks,
       estMinutes: draft.estMinutes,
       genModel: routing.draft.id,
       genCostUsd: drafted.usage.costUsd,

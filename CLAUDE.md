@@ -38,6 +38,13 @@ to a different family on purpose. Embeddings are always an open model.
 - **Mastery gating is SOFT.** Mastery gates *credit*, never *access* — hard-locking content
   reduces completion and would fight our own wave-0 exit gate (finding 2). `skill_readiness`
   is an advisory view; it must not block anything.
+- **Narration must never restate what is on screen.** Graphics + narration beats graphics +
+  narration + the same text (redundancy, d = 0.69), so a "read this page aloud" button is a
+  measured harm. Narrated blocks carry short `keyPoints` for the eye and a separate
+  `narration` for the ear; the transcript substitutes for audio, never accompanies it.
+  `validateLessonStructure()` rejects narration that echoes the screen.
+- **A lesson is blocks, not prose.** Retrieval woven through (>=2 blocks), at least one
+  constructive block, and no more than 60% passive. Enforced before draft, not at review.
 - **Streak freezes are earned and auto-applied, never sold.** Monetising a motivation
   mechanic corrupts it, and protection outperforms reward anyway (finding 4).
 

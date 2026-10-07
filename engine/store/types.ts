@@ -9,6 +9,7 @@
  */
 
 import type { RiskTier, VerifyState } from '../publish/gate.ts';
+import type { LessonBlock } from '../stages/blocks.ts';
 
 export type { RiskTier, VerifyState };
 
@@ -41,6 +42,8 @@ export interface LessonRecord {
   locale: string;
   title: string;
   bodyMd: string;
+  /** The structured lesson. See engine/stages/blocks.ts. */
+  blocks: LessonBlock[];
   estMinutes: number;
   genModel: string;
   genCostUsd: number;

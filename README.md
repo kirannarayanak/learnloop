@@ -31,6 +31,7 @@ Read the thinking in order:
 | [docs/07-risks.md](docs/07-risks.md) | Wrong content, nobody finishing, cost, licensing, incumbents |
 | [docs/09-model-strategy.md](docs/09-model-strategy.md) | Which model per stage, open vs. hosted, why not fine-tuning |
 | [docs/10-motivation.md](docs/10-motivation.md) | Structure and incentives, from the evidence — and what the evidence says not to build |
+| [docs/11-lesson-design.md](docs/11-lesson-design.md) | What a lesson actually is: blocks, narration, and why a read-aloud button is a harm |
 
 ## Run it
 

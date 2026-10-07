@@ -29,6 +29,8 @@ const SOURCES: {
   topic: string;
   detail: string;
   uri: string;
+  /** Use the hand-authored golden lesson for this source's first skill. */
+  golden?: boolean;
 }[] = [
   {
     domainSlug: 'emerging-tech',
@@ -37,6 +39,7 @@ const SOURCES: {
     topic: 'Agent tool-calling loops',
     detail: 'A tool-calling loop sends a request, executes the returned tool call, appends the result, and repeats until the model stops asking.',
     uri: 'https://example.test/agents',
+    golden: true,
   },
   {
     domainSlug: 'fintech-eng',
@@ -66,10 +69,6 @@ const SOURCES: {
 
 async function main(): Promise<void> {
   const store = new MemoryStore();
-  const providers = {
-    generator: new FakeProvider({ family: 'gemini' }),
-    verifier: new FakeProvider({ family: 'claude' }),
-  };
 
   const paths: unknown[] = [];
   const lessons: Record<string, unknown> = {};
@@ -79,6 +78,18 @@ async function main(): Promise<void> {
 
   for (const s of SOURCES) {
     const domain = store.seedDomain(s.domainSlug, s.domainTitle, s.riskTier);
+
+    // One source gets the hand-authored golden lesson, so the app shows what the
+    // generator is AIMED at rather than only its scaffolding. The rest get the generic
+    // block structure, which exercises the renderer and the structural validator.
+    const providers = {
+      generator: new FakeProvider(
+        s.golden === true
+          ? { family: 'gemini' as const, goldenForSlug: 'call-stack' }
+          : { family: 'gemini' as const },
+      ),
+      verifier: new FakeProvider({ family: 'claude' as const }),
+    };
 
     const result = await runPipeline(store, providers, {
       domainSlug: s.domainSlug,
@@ -134,6 +145,7 @@ async function main(): Promise<void> {
         skillId,
         title: lesson.title,
         bodyMd: lesson.bodyMd,
+        blocks: lesson.blocks,
         estMinutes: lesson.estMinutes,
         verifyState: lesson.verifyState,
         genModel: lesson.genModel,
