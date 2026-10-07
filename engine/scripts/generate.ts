@@ -14,6 +14,8 @@ import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import { runPipeline } from '../pipeline.ts';
 import { MemoryStore } from '../store/memory.ts';
+import { PostgresStore } from '../store/postgres.ts';
+import type { Store } from '../store/types.ts';
 import { fakeProviders, hasRealCredentials, realProviders } from '../providers/index.ts';
 import { routing } from '../providers/routing.ts';
 import type { RiskTier, SourceKind } from '../store/types.ts';
@@ -145,8 +147,29 @@ async function main(): Promise<void> {
     return;
   }
 
-  const store = new MemoryStore();
-  store.seedDomain(args.domain, args.domain, args.risk);
+  // Postgres when one is configured — that is the production path. Memory otherwise, so
+  // the CLI stays runnable with nothing installed.
+  const dbUrl = process.env.DATABASE_URL;
+  const usingPostgres = dbUrl !== undefined && dbUrl !== '';
+  let store: Store;
+
+  if (usingPostgres) {
+    const pg = new PostgresStore({ connectionString: dbUrl });
+    store = pg;
+    // The domain must already exist; db/seed/01-domains.sql puts the four beachheads in.
+    if ((await store.getDomainBySlug(args.domain)) === undefined) {
+      await pg.close();
+      throw new Error(
+        `domain '${args.domain}' is not in the database. Apply db/seed/01-domains.sql, ` +
+          `or add it before generating into it — its risk tier is what the publish gate reads.`,
+      );
+    }
+  } else {
+    const memory = new MemoryStore();
+    memory.seedDomain(args.domain, args.domain, args.risk);
+    store = memory;
+  }
+  console.log(`store:     ${usingPostgres ? 'postgres' : 'in-memory (set DATABASE_URL to persist)'}`);
 
   const started = Date.now();
   const result = await runPipeline(
@@ -189,6 +212,8 @@ async function main(): Promise<void> {
     console.log(`\n--- first lesson: ${first.title} ---`);
     console.log(first.blocks.map((b, i) => `  ${i + 1}. ${b.type}`).join('\n'));
   }
+
+  if (store instanceof PostgresStore) await store.close();
 }
 
 await main();

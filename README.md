@@ -73,7 +73,14 @@ optional paid rubric judge:
 npm run eval -- --dry-run
 ```
 
-Not yet: the Postgres store, the human review UI, FSRS, offline service worker, auth.
+The Postgres store, with forward-only migrations and a contract suite that runs the same
+tests against both the in-memory and Postgres implementations:
+
+```
+docker compose up -d && npm run migrate && npm test
+```
+
+Not yet: RLS policies, the human review UI, FSRS, offline service worker, auth.
 
 **The adapters have not been exercised against the live APIs** — no keys were available
 when they were written, so model ids and Flash pricing need confirming before the first

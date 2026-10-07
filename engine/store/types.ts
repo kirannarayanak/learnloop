@@ -104,7 +104,9 @@ export interface CacheRecord {
   hits: number;
 }
 
-export type JobKind = 'ingest' | 'graph' | 'lesson' | 'exercise' | 'verify' | 'translate' | 'bundle';
+/** Units of queued work. Mirrors the `generation_jobs.kind` check constraint; a value
+ *  missing from either side fails at runtime, not at compile time. */
+export type JobKind = 'ingest' | 'graph' | 'draft' | 'verify' | 'translate' | 'bundle';
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
 export interface JobRecord {

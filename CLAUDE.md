@@ -73,6 +73,25 @@ it is safe to run without keys. With keys it prints a cost estimate and asks bef
 spending. Prompts live in `engine/stages/prompts.ts` — that file, not the model choice, is
 what decides whether a lesson teaches.
 
+## Database
+```
+docker compose up -d
+export DATABASE_URL=postgres://postgres:learnloop@localhost:55432/learnloop
+npm run migrate
+```
+With `DATABASE_URL` set, the Store contract suite also runs against Postgres and the
+generate CLI persists there. Without it everything falls back to `MemoryStore` and the
+Postgres tests skip.
+
+**Migrations are forward-only, including `db/schema.sql`.** `migrate.ts` hashes every
+applied file and fails on drift, so never edit one that has run — add a new migration and
+let a fresh install converge by applying the baseline plus everything after it. See
+`db/README.md`.
+
+**Both stores must satisfy `test/store-contract.ts`.** The pipeline is tested against
+MemoryStore and runs against PostgresStore, so any divergence is a bug that only appears
+in production. Add a contract test before adding a Store method.
+
 ## The eval
 ```
 npm run eval -- --dry-run     estimate, spends nothing
@@ -108,9 +127,10 @@ the full pipeline (ingest -> graph -> draft -> verify -> publish) against an in-
 store and a fake provider, and the learner app.
 
 Real Gemini and Claude adapters (`engine/providers/`), prompts, a parser for untrusted model
-output, a generate CLI, and the eval harness. Not built yet: the Postgres `Store`, the human
-review UI, FSRS replacing the 3-correct mastery stand-in, offline service worker, auth.
-See `docs/06-roadmap.md`.
+output, a generate CLI, the eval harness, and the Postgres store with migrations. The full
+pipeline has been run end to end against a real Postgres. Not built yet: RLS policies
+(`db/policies.sql`, wave 3), the human review UI, FSRS replacing the 3-correct mastery
+stand-in, offline service worker, auth. See `docs/06-roadmap.md`.
 
 **The adapters have not been exercised against the live APIs** — no keys in this
 environment. Model ids and Flash prices need confirming before the first real run.

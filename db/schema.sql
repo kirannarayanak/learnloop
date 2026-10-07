@@ -273,6 +273,9 @@ create table credentials (
 -- ============================================================= generation pipeline
 create table generation_jobs (
   id           uuid primary key default uuid_generate_v4(),
+  -- NOTE: superseded by db/migrations/004-job-kinds.sql. This file is the immutable
+  -- baseline — a fresh install applies it and then every migration in order, so both
+  -- paths converge. Editing it would trip the drift check in store/migrate.ts.
   kind         text not null check (kind in ('ingest','graph','lesson','exercise','verify','translate','bundle')),
   payload      jsonb not null,
   status       text not null default 'queued'

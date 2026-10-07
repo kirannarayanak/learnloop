@@ -1,0 +1,28 @@
+# Local Postgres for development and for running the Store contract tests.
+#
+#   docker compose up -d
+#   export DATABASE_URL=postgres://postgres:learnloop@localhost:55432/learnloop
+#   npm run migrate && npm test
+#
+# Port 55432 rather than 5432 so it cannot collide with a Postgres already on the machine.
+# pgvector is in the image because skill deduplication needs it, and without dedup the
+# skill graph fragments and mastery stops transferring (docs/03-data-model.md).
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: learnloop-pg
+    environment:
+      POSTGRES_PASSWORD: learnloop
+      POSTGRES_DB: learnloop
+    ports:
+      - '55432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    volumes:
+      - learnloop-pgdata:/var/lib/postgresql/data
+
+volumes:
+  learnloop-pgdata:
