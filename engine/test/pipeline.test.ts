@@ -117,6 +117,18 @@ test('re-running on an unchanged source is free and does not duplicate content',
   assert.equal(store.skills.size, 4, 'skills were reused, not re-created');
 });
 
+test('the first use of a prefix does not warn — only a repeat that stays cold does', async () => {
+  const store = new MemoryStore();
+  store.seedDomain('emerging-tech', 'Emerging Tech', 'low');
+  const warnings: string[] = [];
+
+  // Normal providers: prefix is cached after its first use, so nothing should warn.
+  const r = await runPipeline(store, providers(), input(), (m) => warnings.push(m));
+
+  assert.equal(r.stats.coldPrefixCalls, 0);
+  assert.deepEqual(warnings, [], 'a routine warning would be ignored, so there must be none');
+});
+
 test('the source prefix is reused across lessons, so prompt caching engages', async () => {
   const store = new MemoryStore();
   store.seedDomain('emerging-tech', 'Emerging Tech', 'low');
@@ -131,7 +143,7 @@ test('the source prefix is reused across lessons, so prompt caching engages', as
   assert.equal(new Set(draftCalls.map((c) => c.suffix)).size, 4);
 });
 
-test('a cold prompt prefix is counted and warned about, not swallowed', async () => {
+test('a REPEATED cold prefix is counted and warned about, not swallowed', async () => {
   const store = new MemoryStore();
   store.seedDomain('emerging-tech', 'Emerging Tech', 'low');
   const warnings: string[] = [];
@@ -144,7 +156,7 @@ test('a cold prompt prefix is counted and warned about, not swallowed', async ()
   );
 
   assert.ok(r.stats.coldPrefixCalls > 0);
-  assert.ok(warnings.some((w) => w.includes('prompt cache miss')));
+  assert.ok(warnings.some((w) => w.includes('prompt cache MISS')));
 });
 
 test('verification sees only the cited spans, never the full source', async () => {

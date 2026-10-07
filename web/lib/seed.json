@@ -1,0 +1,866 @@
+{
+  "generatedAt": "2026-10-07T06:23:58.677Z",
+  "costUsd": 0.000453,
+  "reviewQueueSize": 12,
+  "paths": [
+    {
+      "id": "pth_0007",
+      "slug": "emerging-tech-e35b05f7",
+      "title": "Agent tool-calling loops, end to end",
+      "summary": "Read, trace and apply the core ideas in Agent tool-calling loops with confidence.",
+      "domainSlug": "emerging-tech",
+      "domainTitle": "Emerging Tech for Working Engineers",
+      "riskTier": "low",
+      "sourceUri": "https://example.test/agents",
+      "items": [
+        {
+          "skillId": "skl_0003",
+          "skillTitle": "Agent tool-calling loops: the mechanism",
+          "statement": "Trace how Agent tool-calling loops works step by step",
+          "estMinutes": 8,
+          "lessonId": "lsn_0008",
+          "exerciseCount": 4,
+          "hardPrereqs": []
+        },
+        {
+          "skillId": "skl_0004",
+          "skillTitle": "Agent tool-calling loops: the boundary cases",
+          "statement": "Identify the boundary cases in Agent tool-calling loops",
+          "estMinutes": 7,
+          "lessonId": "lsn_0013",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0003"
+          ]
+        },
+        {
+          "skillId": "skl_0005",
+          "skillTitle": "Agent tool-calling loops: applying it",
+          "statement": "Apply Agent tool-calling loops to a simple problem",
+          "estMinutes": 12,
+          "lessonId": "lsn_0018",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0004"
+          ]
+        },
+        {
+          "skillId": "skl_0006",
+          "skillTitle": "Agent tool-calling loops: the refinement",
+          "statement": "Rewrite a Agent tool-calling loops solution more efficiently",
+          "estMinutes": 10,
+          "lessonId": "lsn_0023",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0005"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pth_0034",
+      "slug": "fintech-eng-27ae9f47",
+      "title": "ISO 20022 message flow, end to end",
+      "summary": "Read, trace and apply the core ideas in ISO 20022 message flow with confidence.",
+      "domainSlug": "fintech-eng",
+      "domainTitle": "Fintech & Payments Engineering",
+      "riskTier": "medium",
+      "sourceUri": "https://example.test/iso20022",
+      "items": [
+        {
+          "skillId": "skl_0030",
+          "skillTitle": "ISO 20022 message flow: the mechanism",
+          "statement": "Trace how ISO 20022 message flow works step by step",
+          "estMinutes": 8,
+          "lessonId": "lsn_0035",
+          "exerciseCount": 4,
+          "hardPrereqs": []
+        },
+        {
+          "skillId": "skl_0031",
+          "skillTitle": "ISO 20022 message flow: the boundary cases",
+          "statement": "Identify the boundary cases in ISO 20022 message flow",
+          "estMinutes": 7,
+          "lessonId": "lsn_0040",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0030"
+          ]
+        },
+        {
+          "skillId": "skl_0032",
+          "skillTitle": "ISO 20022 message flow: applying it",
+          "statement": "Apply ISO 20022 message flow to a simple problem",
+          "estMinutes": 12,
+          "lessonId": "lsn_0045",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0031"
+          ]
+        },
+        {
+          "skillId": "skl_0033",
+          "skillTitle": "ISO 20022 message flow: the refinement",
+          "statement": "Rewrite a ISO 20022 message flow solution more efficiently",
+          "estMinutes": 10,
+          "lessonId": "lsn_0050",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0032"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pth_0061",
+      "slug": "exam-prep-e6b985ec",
+      "title": "Rotational motion, end to end",
+      "summary": "Read, trace and apply the core ideas in Rotational motion with confidence.",
+      "domainSlug": "exam-prep",
+      "domainTitle": "Competitive Exam Preparation",
+      "riskTier": "medium",
+      "sourceUri": "https://example.test/rotational-motion",
+      "items": [
+        {
+          "skillId": "skl_0057",
+          "skillTitle": "Rotational motion: the mechanism",
+          "statement": "Trace how Rotational motion works step by step",
+          "estMinutes": 8,
+          "lessonId": "lsn_0062",
+          "exerciseCount": 4,
+          "hardPrereqs": []
+        },
+        {
+          "skillId": "skl_0058",
+          "skillTitle": "Rotational motion: the boundary cases",
+          "statement": "Identify the boundary cases in Rotational motion",
+          "estMinutes": 7,
+          "lessonId": "lsn_0067",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0057"
+          ]
+        },
+        {
+          "skillId": "skl_0059",
+          "skillTitle": "Rotational motion: applying it",
+          "statement": "Apply Rotational motion to a simple problem",
+          "estMinutes": 12,
+          "lessonId": "lsn_0072",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0058"
+          ]
+        },
+        {
+          "skillId": "skl_0060",
+          "skillTitle": "Rotational motion: the refinement",
+          "statement": "Rewrite a Rotational motion solution more efficiently",
+          "estMinutes": 10,
+          "lessonId": "lsn_0077",
+          "exerciseCount": 4,
+          "hardPrereqs": [
+            "skl_0059"
+          ]
+        }
+      ]
+    }
+  ],
+  "lessons": {
+    "lsn_0008": {
+      "id": "lsn_0008",
+      "skillId": "skl_0003",
+      "title": "Lesson: call-stack",
+      "bodyMd": "## call-stack\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about call-stack"
+        }
+      ],
+      "sampledForReview": false
+    },
+    "lsn_0013": {
+      "id": "lsn_0013",
+      "skillId": "skl_0004",
+      "title": "Lesson: base-case",
+      "bodyMd": "## base-case\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about base-case"
+        }
+      ],
+      "sampledForReview": false
+    },
+    "lsn_0018": {
+      "id": "lsn_0018",
+      "skillId": "skl_0005",
+      "title": "Lesson: write-recursion",
+      "bodyMd": "## write-recursion\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about write-recursion"
+        }
+      ],
+      "sampledForReview": false
+    },
+    "lsn_0023": {
+      "id": "lsn_0023",
+      "skillId": "skl_0006",
+      "title": "Lesson: tail-calls",
+      "bodyMd": "## tail-calls\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about tail-calls"
+        }
+      ],
+      "sampledForReview": false
+    },
+    "lsn_0035": {
+      "id": "lsn_0035",
+      "skillId": "skl_0030",
+      "title": "Lesson: call-stack",
+      "bodyMd": "## call-stack\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about call-stack"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0040": {
+      "id": "lsn_0040",
+      "skillId": "skl_0031",
+      "title": "Lesson: base-case",
+      "bodyMd": "## base-case\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about base-case"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0045": {
+      "id": "lsn_0045",
+      "skillId": "skl_0032",
+      "title": "Lesson: write-recursion",
+      "bodyMd": "## write-recursion\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about write-recursion"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0050": {
+      "id": "lsn_0050",
+      "skillId": "skl_0033",
+      "title": "Lesson: tail-calls",
+      "bodyMd": "## tail-calls\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about tail-calls"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0062": {
+      "id": "lsn_0062",
+      "skillId": "skl_0057",
+      "title": "Lesson: call-stack",
+      "bodyMd": "## call-stack\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about call-stack"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0067": {
+      "id": "lsn_0067",
+      "skillId": "skl_0058",
+      "title": "Lesson: base-case",
+      "bodyMd": "## base-case\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about base-case"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0072": {
+      "id": "lsn_0072",
+      "skillId": "skl_0059",
+      "title": "Lesson: write-recursion",
+      "bodyMd": "## write-recursion\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about write-recursion"
+        }
+      ],
+      "sampledForReview": true
+    },
+    "lsn_0077": {
+      "id": "lsn_0077",
+      "skillId": "skl_0060",
+      "title": "Lesson: tail-calls",
+      "bodyMd": "## tail-calls\n\nExplanation, worked example, common misconception, recap.",
+      "estMinutes": 8,
+      "verifyState": "auto_passed",
+      "genModel": "gemini-flash-latest",
+      "citations": [
+        {
+          "quote": "authoritative sentence about tail-calls"
+        }
+      ],
+      "sampledForReview": true
+    }
+  },
+  "exercises": {
+    "lsn_0008": [
+      {
+        "id": "exr_0009",
+        "kind": "mcq",
+        "promptMd": "Question 1 about call-stack?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how call-stack works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0010",
+        "kind": "mcq",
+        "promptMd": "Question 2 about call-stack?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how call-stack works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0011",
+        "kind": "mcq",
+        "promptMd": "Question 3 about call-stack?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how call-stack works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0012",
+        "kind": "mcq",
+        "promptMd": "Question 4 about call-stack?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how call-stack works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0013": [
+      {
+        "id": "exr_0014",
+        "kind": "mcq",
+        "promptMd": "Question 1 about base-case?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how base-case works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0015",
+        "kind": "mcq",
+        "promptMd": "Question 2 about base-case?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how base-case works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0016",
+        "kind": "mcq",
+        "promptMd": "Question 3 about base-case?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how base-case works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0017",
+        "kind": "mcq",
+        "promptMd": "Question 4 about base-case?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how base-case works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0018": [
+      {
+        "id": "exr_0019",
+        "kind": "mcq",
+        "promptMd": "Question 1 about write-recursion?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how write-recursion works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0020",
+        "kind": "mcq",
+        "promptMd": "Question 2 about write-recursion?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how write-recursion works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0021",
+        "kind": "mcq",
+        "promptMd": "Question 3 about write-recursion?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how write-recursion works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0022",
+        "kind": "mcq",
+        "promptMd": "Question 4 about write-recursion?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how write-recursion works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0023": [
+      {
+        "id": "exr_0024",
+        "kind": "mcq",
+        "promptMd": "Question 1 about tail-calls?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how tail-calls works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0025",
+        "kind": "mcq",
+        "promptMd": "Question 2 about tail-calls?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how tail-calls works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0026",
+        "kind": "mcq",
+        "promptMd": "Question 3 about tail-calls?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how tail-calls works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0027",
+        "kind": "mcq",
+        "promptMd": "Question 4 about tail-calls?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how tail-calls works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0035": [
+      {
+        "id": "exr_0036",
+        "kind": "mcq",
+        "promptMd": "Question 1 about call-stack?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how call-stack works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0037",
+        "kind": "mcq",
+        "promptMd": "Question 2 about call-stack?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how call-stack works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0038",
+        "kind": "mcq",
+        "promptMd": "Question 3 about call-stack?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how call-stack works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0039",
+        "kind": "mcq",
+        "promptMd": "Question 4 about call-stack?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how call-stack works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0040": [
+      {
+        "id": "exr_0041",
+        "kind": "mcq",
+        "promptMd": "Question 1 about base-case?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how base-case works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0042",
+        "kind": "mcq",
+        "promptMd": "Question 2 about base-case?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how base-case works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0043",
+        "kind": "mcq",
+        "promptMd": "Question 3 about base-case?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how base-case works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0044",
+        "kind": "mcq",
+        "promptMd": "Question 4 about base-case?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how base-case works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0045": [
+      {
+        "id": "exr_0046",
+        "kind": "mcq",
+        "promptMd": "Question 1 about write-recursion?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how write-recursion works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0047",
+        "kind": "mcq",
+        "promptMd": "Question 2 about write-recursion?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how write-recursion works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0048",
+        "kind": "mcq",
+        "promptMd": "Question 3 about write-recursion?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how write-recursion works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0049",
+        "kind": "mcq",
+        "promptMd": "Question 4 about write-recursion?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how write-recursion works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0050": [
+      {
+        "id": "exr_0051",
+        "kind": "mcq",
+        "promptMd": "Question 1 about tail-calls?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how tail-calls works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0052",
+        "kind": "mcq",
+        "promptMd": "Question 2 about tail-calls?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how tail-calls works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0053",
+        "kind": "mcq",
+        "promptMd": "Question 3 about tail-calls?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how tail-calls works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0054",
+        "kind": "mcq",
+        "promptMd": "Question 4 about tail-calls?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how tail-calls works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0062": [
+      {
+        "id": "exr_0063",
+        "kind": "mcq",
+        "promptMd": "Question 1 about call-stack?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how call-stack works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0064",
+        "kind": "mcq",
+        "promptMd": "Question 2 about call-stack?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how call-stack works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0065",
+        "kind": "mcq",
+        "promptMd": "Question 3 about call-stack?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how call-stack works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0066",
+        "kind": "mcq",
+        "promptMd": "Question 4 about call-stack?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how call-stack works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0067": [
+      {
+        "id": "exr_0068",
+        "kind": "mcq",
+        "promptMd": "Question 1 about base-case?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how base-case works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0069",
+        "kind": "mcq",
+        "promptMd": "Question 2 about base-case?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how base-case works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0070",
+        "kind": "mcq",
+        "promptMd": "Question 3 about base-case?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how base-case works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0071",
+        "kind": "mcq",
+        "promptMd": "Question 4 about base-case?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how base-case works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0072": [
+      {
+        "id": "exr_0073",
+        "kind": "mcq",
+        "promptMd": "Question 1 about write-recursion?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how write-recursion works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0074",
+        "kind": "mcq",
+        "promptMd": "Question 2 about write-recursion?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how write-recursion works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0075",
+        "kind": "mcq",
+        "promptMd": "Question 3 about write-recursion?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how write-recursion works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0076",
+        "kind": "mcq",
+        "promptMd": "Question 4 about write-recursion?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how write-recursion works.",
+        "difficulty": 0.8
+      }
+    ],
+    "lsn_0077": [
+      {
+        "id": "exr_0078",
+        "kind": "mcq",
+        "promptMd": "Question 1 about tail-calls?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how tail-calls works.",
+        "difficulty": 0.2
+      },
+      {
+        "id": "exr_0079",
+        "kind": "mcq",
+        "promptMd": "Question 2 about tail-calls?",
+        "answer": {
+          "correct": 1
+        },
+        "explanationMd": "The answer is option 2 because of how tail-calls works.",
+        "difficulty": 0.4
+      },
+      {
+        "id": "exr_0080",
+        "kind": "mcq",
+        "promptMd": "Question 3 about tail-calls?",
+        "answer": {
+          "correct": 2
+        },
+        "explanationMd": "The answer is option 3 because of how tail-calls works.",
+        "difficulty": 0.6000000000000001
+      },
+      {
+        "id": "exr_0081",
+        "kind": "mcq",
+        "promptMd": "Question 4 about tail-calls?",
+        "answer": {
+          "correct": 0
+        },
+        "explanationMd": "The answer is option 1 because of how tail-calls works.",
+        "difficulty": 0.8
+      }
+    ]
+  },
+  "pendingReview": [
+    {
+      "title": "Photosynthesis, end to end",
+      "domainTitle": "School Curriculum (K-12)",
+      "riskTier": "high",
+      "lessonCount": 4,
+      "reason": "needs_human_approval"
+    }
+  ]
+}

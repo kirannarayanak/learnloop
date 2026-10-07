@@ -11,3 +11,5 @@ build/
 .vercel/
 coverage/
 .turbo/
+next-env.d.ts
+*.tsbuildinfo

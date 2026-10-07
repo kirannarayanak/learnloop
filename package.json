@@ -1,0 +1,15 @@
+{
+  "name": "learnloop",
+  "private": true,
+  "workspaces": [
+    "engine",
+    "web"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspace @learnloop/engine",
+    "seed": "npm run seed --workspace @learnloop/engine",
+    "dev": "npm run seed && npm run dev --workspace @learnloop/web",
+    "build": "npm run seed && npm run build --workspace @learnloop/web"
+  }
+}

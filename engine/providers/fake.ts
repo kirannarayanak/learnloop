@@ -25,6 +25,12 @@ export interface FakeOptions {
   exercisesPerSkill?: number;
 }
 
+/** First markdown heading of the source, so generated content is recognisably about it. */
+function topicOf(prefix: string): string {
+  const heading = prefix.split('\n').find((l) => l.startsWith('# '));
+  return heading === undefined ? 'the topic' : heading.replace(/^#\s*/, '').trim();
+}
+
 /** Roughly 4 characters per token — close enough for cost accounting in tests. */
 function estimateTokens(s: string): number {
   return Math.ceil(s.length / 4);
@@ -92,7 +98,7 @@ export class FakeProvider implements Provider {
         return { markdown: req.prefix, title: 'Fake Source' };
 
       case 'graph':
-        return this.graph();
+        return this.graph(topicOf(req.prefix));
 
       case 'draft':
         return this.draft(req.suffix);
@@ -116,15 +122,15 @@ export class FakeProvider implements Provider {
    * Statements are phrased as observable "can do X" so assertSkillStatements passes —
    * if they weren't, the pipeline would correctly reject this fixture.
    */
-  private graph(): GraphOutput {
+  private graph(topic: string): GraphOutput {
     return {
-      pathTitle: 'Recursion, end to end',
-      pathSummary: 'Read, trace and write recursive functions with confidence.',
+      pathTitle: `${topic}, end to end`,
+      pathSummary: `Read, trace and apply the core ideas in ${topic} with confidence.`,
       skills: [
-        { slug: 'call-stack', title: 'The call stack', statement: 'Trace a function call through the stack', estMinutes: 8 },
-        { slug: 'base-case', title: 'Base cases', statement: 'Identify the base case of a recursive function', estMinutes: 7 },
-        { slug: 'write-recursion', title: 'Writing recursion', statement: 'Write a recursive function for a simple problem', estMinutes: 12 },
-        { slug: 'tail-calls', title: 'Tail calls', statement: 'Rewrite a recursive function in tail position', estMinutes: 10 },
+        { slug: 'call-stack', title: `${topic}: the mechanism`, statement: `Trace how ${topic} works step by step`, estMinutes: 8 },
+        { slug: 'base-case', title: `${topic}: the boundary cases`, statement: `Identify the boundary cases in ${topic}`, estMinutes: 7 },
+        { slug: 'write-recursion', title: `${topic}: applying it`, statement: `Apply ${topic} to a simple problem`, estMinutes: 12 },
+        { slug: 'tail-calls', title: `${topic}: the refinement`, statement: `Rewrite a ${topic} solution more efficiently`, estMinutes: 10 },
       ],
       edges: [
         { prereqSlug: 'call-stack', skillSlug: 'base-case', strength: 1 },

@@ -23,13 +23,16 @@ export function cacheKeyFor(req: GenRequest, model: ModelRef): string {
 export interface CacheStats {
   calls: number;
   hits: number;
-  /** Calls where the provider reported zero cached input tokens on a long prefix. */
+  /** Repeat uses of a prefix that still reported zero cached input tokens. */
   coldPrefixCalls: number;
   costUsd: number;
+  /** Prefixes already sent this run. The FIRST use of a prefix is always cold —
+   *  only a repeat that is still cold indicates a real regression. */
+  seenPrefixes: Set<string>;
 }
 
 export function newStats(): CacheStats {
-  return { calls: 0, hits: 0, coldPrefixCalls: 0, costUsd: 0 };
+  return { calls: 0, hits: 0, coldPrefixCalls: 0, costUsd: 0, seenPrefixes: new Set() };
 }
 
 /** Below this, prompt caching wouldn't engage anyway, so a cold prefix means nothing. */
@@ -69,12 +72,22 @@ export async function generateCached<T>(
 
   const result = await provider.generate<T>(req, model);
 
-  if (result.usage.cachedInputTokens === 0 && req.prefix.length > PREFIX_WORTH_CACHING) {
+  // The first call on any prefix is necessarily a cache write, not a read. Warning on
+  // that would make this message routine, and a routine warning gets ignored — so only
+  // a REPEAT use of the same prefix that is still cold counts as a regression.
+  const prefixRepeated = stats.seenPrefixes.has(req.prefix);
+  stats.seenPrefixes.add(req.prefix);
+
+  if (
+    prefixRepeated &&
+    result.usage.cachedInputTokens === 0 &&
+    req.prefix.length > PREFIX_WORTH_CACHING
+  ) {
     stats.coldPrefixCalls += 1;
     log(
-      `[cost] prompt cache miss on a ${req.prefix.length}-char prefix for stage ` +
-        `'${req.stage}' (model ${model.id}). If this persists, something volatile has ` +
-        `leaked into the cached prefix — that is a ~10x cost regression.`,
+      `[cost] prompt cache MISS on a repeated ${req.prefix.length}-char prefix for stage ` +
+        `'${req.stage}' (model ${model.id}). Something volatile has leaked into the ` +
+        `cached prefix — this is a ~10x cost regression.`,
     );
   }
 

@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+/* Calm and typographic on purpose. This is an education product — it should read as
+   trustworthy, not as a slot machine. The incentive surfaces (streak, points) are
+   deliberately quiet: docs/10-motivation.md finding 5 is that rewards framed as
+   control crowd out a learner's own interest. */
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --border: #e7e3dc;
+  --ink: #1b1a17;
+  --ink-soft: #6b665d;
+  --accent: #1f6f5c;
+  --accent-soft: #e6f0ec;
+  --warn: #8a5a1b;
+  --warn-soft: #fbf1e2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f;
+    --surface: #1c1b17;
+    --border: #302e28;
+    --ink: #f2efe9;
+    --ink-soft: #a09a8e;
+    --accent: #5fbfa3;
+    --accent-soft: #19302a;
+    --warn: #d9a765;
+    --warn-soft: #2d2317;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lessons are MDX-ish markdown; style the rendered output without a plugin. */
+.prose-lesson h2 { font-size: 1.25rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+.prose-lesson h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 0.4rem; }
+.prose-lesson p { margin: 0.75rem 0; line-height: 1.7; }
+.prose-lesson code {
+  background: var(--accent-soft); padding: 0.1rem 0.3rem; border-radius: 0.25rem;
+  font-size: 0.9em;
+}
