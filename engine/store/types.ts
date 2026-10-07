@@ -129,6 +129,49 @@ export interface ReviewQueueItem {
   createdAt: string;
 }
 
+/** A queue item with enough context to triage without opening it. */
+export interface ReviewQueueEntry extends ReviewQueueItem {
+  lessonTitle: string;
+  skillStatement: string;
+  domainTitle: string;
+  riskTier: RiskTier;
+  verifyState: VerifyState;
+  /** Blocks the reviewer will read. Used for a length estimate in the list. */
+  blockCount: number;
+}
+
+/** Everything a reviewer needs to judge a lesson without leaving the page. */
+export interface LessonForReview {
+  lesson: LessonRecord;
+  skillTitle: string;
+  skillStatement: string;
+  domainTitle: string;
+  riskTier: RiskTier;
+  /** The spans the lesson claims to rest on, with where they came from. */
+  citations: { quote: string; sourceUri: string | null; sourceLicense: string | null }[];
+  reason: ReviewQueueItem['reason'];
+  /** Path this lesson belongs to, if any — approving may unblock it. */
+  pathId: string | null;
+}
+
+export type ReviewVerdict = 'approve' | 'reject' | 'needs_edit';
+
+export interface ReviewDecision {
+  lessonId: string;
+  verdict: ReviewVerdict;
+  notes: string;
+  /** Who decided. Null until auth exists; recorded so the audit trail is honest. */
+  reviewerId: string | null;
+  isExpert: boolean;
+}
+
+export interface ReviewOutcome {
+  /** The lesson's state after the decision. */
+  verifyState: VerifyState;
+  /** A path that became publishable because of this decision. */
+  publishedPathId: string | null;
+}
+
 export interface Store {
   // --- domains
   getDomainBySlug(slug: string): Promise<DomainRecord | undefined>;
@@ -180,4 +223,15 @@ export interface Store {
   // --- human review
   enqueueReview(item: ReviewQueueItem): Promise<void>;
   listReviewQueue(): Promise<ReviewQueueItem[]>;
+  /** The queue with enough context to triage. Oldest first — it is a work queue. */
+  listReviewQueueDetailed(): Promise<ReviewQueueEntry[]>;
+  getLessonForReview(lessonId: string): Promise<LessonForReview | undefined>;
+  /**
+   * Record a human verdict.
+   *
+   * An approval is the ONLY way a high-risk lesson can ever publish, so this writes an
+   * audit row as well as changing state — "who approved this and when" must be
+   * answerable (docs/07-risks.md).
+   */
+  recordReview(decision: ReviewDecision): Promise<ReviewOutcome>;
 }

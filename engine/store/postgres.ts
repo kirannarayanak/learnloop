@@ -14,8 +14,10 @@
 import { Pool, type PoolClient, type QueryResultRow } from 'pg';
 import type {
   CacheRecord, CitationRecord, DomainRecord, ExerciseRecord, JobKind, JobRecord,
-  LessonRecord, PathRecord, ReviewQueueItem, SkillRecord, SourceRecord, Store, VerifyState,
+  LessonForReview, LessonRecord, PathRecord, ReviewDecision, ReviewOutcome,
+  ReviewQueueEntry, ReviewQueueItem, SkillRecord, SourceRecord, Store, VerifyState,
 } from './types.ts';
+import { evaluatePublishGate } from '../publish/gate.ts';
 import type { LessonBlock } from '../stages/blocks.ts';
 
 export interface PostgresStoreOptions {
@@ -460,7 +462,7 @@ export class PostgresStore implements Store {
   async listReviewQueue(): Promise<ReviewQueueItem[]> {
     const rows = await this.rows<{ entity: string; entity_id: string; notes: string | null; created_at: Date }>(
       `select entity, entity_id, notes, created_at
-         from reviews where reviewer_id is null order by created_at`,
+         from reviews where verdict = 'needs_edit' and resolved_at is null order by created_at`,
     );
     return rows.map((r) => ({
       entity: r.entity as ReviewQueueItem['entity'],
@@ -468,6 +470,171 @@ export class PostgresStore implements Store {
       reason: (r.notes ?? 'flagged') as ReviewQueueItem['reason'],
       createdAt: r.created_at.toISOString(),
     }));
+  }
+
+  async listReviewQueueDetailed(): Promise<ReviewQueueEntry[]> {
+    const rows = await this.rows<{
+      entity: string; entity_id: string; notes: string | null; created_at: Date;
+      title: string; statement: string; domain_title: string;
+      risk_tier: DomainRecord['riskTier']; verify_state: string; block_count: string;
+    }>(
+      `select r.entity, r.entity_id, r.notes, r.created_at,
+              l.title, s.statement, d.title as domain_title, d.risk_tier, l.verify_state,
+              jsonb_array_length(l.blocks) as block_count
+         from reviews r
+         join lessons l on l.id = r.entity_id
+         join skills  s on s.id = l.skill_id
+         join domains d on d.id = s.domain_id
+        where r.entity = 'lesson' and r.verdict = 'needs_edit' and r.resolved_at is null
+        order by r.created_at`,
+    );
+    return rows.map((r) => ({
+      entity: 'lesson',
+      entityId: r.entity_id,
+      reason: (r.notes ?? 'flagged') as ReviewQueueItem['reason'],
+      createdAt: r.created_at.toISOString(),
+      lessonTitle: r.title,
+      skillStatement: r.statement,
+      domainTitle: r.domain_title,
+      riskTier: r.risk_tier,
+      verifyState: r.verify_state as VerifyState,
+      blockCount: Number(r.block_count),
+    }));
+  }
+
+  async getLessonForReview(lessonId: string): Promise<LessonForReview | undefined> {
+    const row = await this.one<LessonRow & {
+      skill_title: string; statement: string; domain_title: string;
+      risk_tier: DomainRecord['riskTier']; path_id: string | null; reason: string | null;
+    }>(
+      `select l.id, l.skill_id, l.locale, l.title, l.body_md, l.blocks, l.est_minutes,
+              l.gen_model, l.gen_cost_usd, l.verify_state, l.prompt_version,
+              s.title as skill_title, s.statement, d.title as domain_title, d.risk_tier,
+              pi.path_id,
+              (select notes from reviews r
+                where r.entity_id = l.id and r.verdict = 'needs_edit' and r.resolved_at is null
+                order by r.created_at limit 1) as reason
+         from lessons l
+         join skills  s on s.id = l.skill_id
+         join domains d on d.id = s.domain_id
+         left join path_items pi on pi.skill_id = s.id
+        where l.id = $1
+        limit 1`,
+      [lessonId],
+    );
+    if (row === undefined) return undefined;
+
+    const citations = await this.rows<{ quote: string | null; uri: string | null; license: string | null }>(
+      `select ls.quote, src.uri, src.license
+         from lesson_sources ls join sources src on src.id = ls.source_id
+        where ls.lesson_id = $1`,
+      [lessonId],
+    );
+
+    return {
+      lesson: toLesson(row),
+      skillTitle: row.skill_title,
+      skillStatement: row.statement,
+      domainTitle: row.domain_title,
+      riskTier: row.risk_tier,
+      citations: citations.map((c) => ({
+        quote: c.quote ?? '',
+        sourceUri: c.uri,
+        sourceLicense: c.license,
+      })),
+      reason: (row.reason ?? 'flagged') as ReviewQueueItem['reason'],
+      pathId: row.path_id,
+    };
+  }
+
+  async recordReview(decision: ReviewDecision): Promise<ReviewOutcome> {
+    const verifyState: VerifyState =
+      decision.verdict === 'approve' ? 'human_approved'
+      : decision.verdict === 'reject' ? 'disputed'
+      : 'auto_failed';
+
+    const skillId = await this.tx(async (client) => {
+      const lesson = await client.query<{ skill_id: string }>(
+        'select skill_id from lessons where id = $1',
+        [decision.lessonId],
+      );
+      const row = lesson.rows[0];
+      if (row === undefined) throw new Error(`no such lesson ${decision.lessonId}`);
+
+      // The audit row and the state change are one transaction: a lesson that became
+      // human_approved with no record of who approved it is exactly what this table is
+      // for (docs/07-risks.md).
+      await client.query(
+        `insert into reviews (entity, entity_id, reviewer_id, verdict, notes, is_expert, resolved_at)
+         values ('lesson', $1, $2, $3, $4, $5, now())`,
+        [decision.lessonId, decision.reviewerId, decision.verdict, decision.notes, decision.isExpert],
+      );
+
+      // Close the open queue entry. Resolving it keeps the row — the audit trail must
+      // show that this lesson WAS queued, and why.
+      await client.query(
+        `update reviews set resolved_at = now()
+          where entity_id = $1 and verdict = 'needs_edit' and resolved_at is null`,
+        [decision.lessonId],
+      );
+
+      await client.query(
+        'update lessons set verify_state = $2, updated_at = now() where id = $1',
+        [decision.lessonId, verifyState],
+      );
+
+      return row.skill_id;
+    });
+
+    return { verifyState, publishedPathId: await this.tryPublishPathFor(skillId) };
+  }
+
+  /**
+   * Publish a path once every lesson in it clears the gate.
+   *
+   * Without this an approval changes a state field and nothing visible happens — and a
+   * reviewer who believes their work does nothing stops doing it.
+   */
+  private async tryPublishPathFor(skillId: string): Promise<string | null> {
+    const path = await this.one<{ id: string; risk_tier: DomainRecord['riskTier'] }>(
+      `select p.id, d.risk_tier
+         from path_items pi
+         join paths p on p.id = pi.path_id
+         join domains d on d.id = p.domain_id
+        where pi.skill_id = $1 and p.status <> 'published'
+        limit 1`,
+      [skillId],
+    );
+    if (path === undefined) return null;
+
+    const lessons = await this.rows<{ id: string; verify_state: string; citation_count: string }>(
+      `select l.id, l.verify_state,
+              (select count(*) from lesson_sources ls where ls.lesson_id = l.id) as citation_count
+         from path_items pi
+         join lessons l on l.skill_id = pi.skill_id
+        where pi.path_id = $1`,
+      [path.id],
+    );
+
+    const items = await this.rows<{ n: string }>(
+      'select count(*) as n from path_items where path_id = $1',
+      [path.id],
+    );
+    if (lessons.length < Number(items[0]?.n ?? 0)) return null; // a skill still has no lesson
+
+    for (const l of lessons) {
+      const decision = evaluatePublishGate({
+        lessonId: l.id,
+        riskTier: path.risk_tier,
+        verifyState: l.verify_state as VerifyState,
+        citedSourceIds: Number(l.citation_count) > 0 ? ['present'] : [],
+        unlicensedSourceIds: [],
+      });
+      if (!decision.publish) return null;
+    }
+
+    await this.publishPath(path.id, new Date().toISOString());
+    return path.id;
   }
 }
 

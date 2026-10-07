@@ -80,7 +80,10 @@ tests against both the in-memory and Postgres implementations:
 docker compose up -d && npm run migrate && npm test
 ```
 
-Not yet: RLS policies, the human review UI, FSRS, offline service worker, auth.
+A review tool at `/review` — the human approval queue that high-risk content cannot
+publish without. Needs `DATABASE_URL` and `REVIEW_TOKEN`, and fails closed without them.
+
+Not yet: RLS policies, FSRS, offline service worker, real auth.
 
 **The adapters have not been exercised against the live APIs** — no keys were available
 when they were written, so model ids and Flash pricing need confirming before the first

@@ -307,7 +307,161 @@ export function runStoreContract(harness: ContractHarness): void {
     await assert.rejects(() => store.completeJob('00000000-0000-0000-0000-000000000000', 0));
   });
 
-  // --- review queue
+  // --- human review
+
+  /** A domain, a skill, a lesson with a citation, and a path containing it. */
+  async function seedReviewable(
+    store: Store,
+    riskTier: 'low' | 'medium' | 'high',
+    skillCount = 1,
+  ): Promise<{ domainId: string; lessonIds: string[]; pathId: string }> {
+    const domainId = await harness.seedDomain(store, `d-${riskTier}`, 'D', riskTier);
+    const skills = await store.insertSkills(
+      Array.from({ length: skillCount }, (_, i) => ({
+        domainId, slug: `s${i}`, title: `S${i}`, statement: `Do S${i}`, estMinutes: 5,
+      })),
+    );
+    const source = await store.upsertSource({
+      kind: 'url', uri: 'https://e.test/s', title: null, license: 'CC-BY-4.0',
+      contentHash: `h-${riskTier}`, retrievedAt: new Date().toISOString(),
+    });
+
+    const lessonIds: string[] = [];
+    for (const skill of skills) {
+      const lesson = await store.insertLesson({
+        skillId: skill.id, locale: 'en', title: `L ${skill.slug}`, bodyMd: '',
+        blocks: BLOCKS, estMinutes: 8, genModel: 'm', genCostUsd: 0,
+        verifyState: 'auto_passed', promptVersion: 'v3',
+      });
+      await store.insertCitations([{ lessonId: lesson.id, sourceId: source.id, quote: 'a span' }]);
+      lessonIds.push(lesson.id);
+    }
+
+    const path = await store.insertPath({
+      domainId, slug: `p-${riskTier}`, title: 'P', summary: '', locale: 'en',
+      status: 'draft', promptVersion: 'v3', itemSkillIds: skills.map((s) => s.id), publishedAt: null,
+    });
+    return { domainId, lessonIds, pathId: path.id };
+  }
+
+  test(label('the detailed queue carries enough context to triage'), async () => {
+    const store = await harness.create();
+    const { lessonIds } = await seedReviewable(store, 'high');
+    const lessonId = lessonIds[0];
+    assert.ok(lessonId);
+    await store.enqueueReview({ entity: 'lesson', entityId: lessonId, reason: 'high_risk', createdAt: new Date().toISOString() });
+
+    const queue = await store.listReviewQueueDetailed();
+    assert.equal(queue.length, 1);
+    const entry = queue[0];
+    assert.equal(entry?.riskTier, 'high', 'the reviewer must see why it is here');
+    assert.equal(entry?.reason, 'high_risk');
+    assert.equal(entry?.blockCount, BLOCKS.length);
+    assert.ok((entry?.skillStatement ?? '').length > 0);
+  });
+
+  test(label('a lesson for review comes with its citations and risk tier'), async () => {
+    const store = await harness.create();
+    const { lessonIds } = await seedReviewable(store, 'high');
+    const lessonId = lessonIds[0];
+    assert.ok(lessonId);
+    await store.enqueueReview({ entity: 'lesson', entityId: lessonId, reason: 'high_risk', createdAt: new Date().toISOString() });
+
+    const forReview = await store.getLessonForReview(lessonId);
+    assert.equal(forReview?.riskTier, 'high');
+    assert.equal(forReview?.reason, 'high_risk');
+    // The reviewer judges correctness, which is impossible without the evidence.
+    assert.equal(forReview?.citations.length, 1);
+    assert.equal(forReview?.citations[0]?.quote, 'a span');
+    assert.equal(forReview?.citations[0]?.sourceLicense, 'CC-BY-4.0');
+    assert.deepEqual(forReview?.lesson.blocks, BLOCKS);
+
+    assert.equal(await store.getLessonForReview('00000000-0000-0000-0000-000000000000'), undefined);
+  });
+
+  // The whole point of the queue: this is the ONLY route a high-risk lesson has to
+  // publication.
+  test(label('approving a high-risk lesson sets human_approved and publishes its path'), async () => {
+    const store = await harness.create();
+    const { lessonIds, pathId } = await seedReviewable(store, 'high');
+    const lessonId = lessonIds[0];
+    assert.ok(lessonId);
+    await store.enqueueReview({ entity: 'lesson', entityId: lessonId, reason: 'high_risk', createdAt: new Date().toISOString() });
+
+    assert.equal((await store.listPublishedPaths()).length, 0, 'blocked before approval');
+
+    const outcome = await store.recordReview({
+      lessonId, verdict: 'approve', notes: 'checked against the syllabus',
+      reviewerId: null, isExpert: true,
+    });
+
+    assert.equal(outcome.verifyState, 'human_approved');
+    assert.equal(outcome.publishedPathId, pathId, 'approval must do something visible');
+    assert.equal((await store.listPublishedPaths()).length, 1);
+    assert.equal((await store.listReviewQueueDetailed()).length, 0, 'resolved items leave the queue');
+  });
+
+  test(label('rejecting marks the lesson disputed and publishes nothing'), async () => {
+    const store = await harness.create();
+    const { lessonIds } = await seedReviewable(store, 'high');
+    const lessonId = lessonIds[0];
+    assert.ok(lessonId);
+    await store.enqueueReview({ entity: 'lesson', entityId: lessonId, reason: 'high_risk', createdAt: new Date().toISOString() });
+
+    const outcome = await store.recordReview({
+      lessonId, verdict: 'reject', notes: 'the second claim is wrong',
+      reviewerId: null, isExpert: true,
+    });
+    assert.equal(outcome.verifyState, 'disputed');
+    assert.equal(outcome.publishedPathId, null);
+    assert.equal((await store.listPublishedPaths()).length, 0);
+  });
+
+  test(label('a path publishes only when EVERY lesson in it is approved'), async () => {
+    const store = await harness.create();
+    const { lessonIds, pathId } = await seedReviewable(store, 'high', 3);
+    for (const id of lessonIds) {
+      await store.enqueueReview({ entity: 'lesson', entityId: id, reason: 'high_risk', createdAt: new Date().toISOString() });
+    }
+
+    const [first, second, third] = lessonIds;
+    assert.ok(first && second && third);
+
+    const a = await store.recordReview({ lessonId: first, verdict: 'approve', notes: '', reviewerId: null, isExpert: true });
+    assert.equal(a.publishedPathId, null, 'one of three is not enough');
+
+    const b = await store.recordReview({ lessonId: second, verdict: 'approve', notes: '', reviewerId: null, isExpert: true });
+    assert.equal(b.publishedPathId, null);
+
+    // A path with a hole teaches a prerequisite chain that is actually broken, so it
+    // waits for all of them.
+    const c = await store.recordReview({ lessonId: third, verdict: 'approve', notes: '', reviewerId: null, isExpert: true });
+    assert.equal(c.publishedPathId, pathId);
+  });
+
+  test(label('needs_edit keeps the lesson unpublishable and leaves it queued'), async () => {
+    const store = await harness.create();
+    const { lessonIds } = await seedReviewable(store, 'medium');
+    const lessonId = lessonIds[0];
+    assert.ok(lessonId);
+    await store.enqueueReview({ entity: 'lesson', entityId: lessonId, reason: 'sampled', createdAt: new Date().toISOString() });
+
+    const outcome = await store.recordReview({
+      lessonId, verdict: 'needs_edit', notes: 'the diagram labels are reversed',
+      reviewerId: null, isExpert: false,
+    });
+    assert.equal(outcome.verifyState, 'auto_failed');
+    assert.equal(outcome.publishedPathId, null);
+  });
+
+  test(label('reviewing an unknown lesson throws rather than silently succeeding'), async () => {
+    const store = await harness.create();
+    await assert.rejects(() =>
+      store.recordReview({
+        lessonId: '00000000-0000-0000-0000-000000000000',
+        verdict: 'approve', notes: '', reviewerId: null, isExpert: true,
+      }));
+  });
 
   test(label('the review queue records entity, reason and order'), async () => {
     const store = await harness.create();

@@ -10,8 +10,10 @@
 import { createHash } from 'node:crypto';
 import type {
   CacheRecord, CitationRecord, DomainRecord, ExerciseRecord, JobKind, JobRecord,
-  LessonRecord, PathRecord, ReviewQueueItem, SkillRecord, SourceRecord, Store, VerifyState,
+  LessonForReview, LessonRecord, PathRecord, ReviewDecision, ReviewOutcome,
+  ReviewQueueEntry, ReviewQueueItem, SkillRecord, SourceRecord, Store, VerifyState,
 } from './types.ts';
+import { evaluatePublishGate } from '../publish/gate.ts';
 
 let counter = 0;
 /** Deterministic ids keep test assertions and golden files stable. */
@@ -50,6 +52,11 @@ export class MemoryStore implements Store {
   readonly cache = new Map<string, CacheRecord>();
   readonly jobs = new Map<string, JobRecord>();
   readonly reviewQueue: ReviewQueueItem[] = [];
+  /** Audit trail of human decisions. Append-only, like attempts. */
+  readonly reviews: {
+    entity: string; entityId: string; verdict: string; notes: string;
+    reviewerId: string | null; isExpert: boolean; createdAt: string;
+  }[] = [];
 
   seedDomain(slug: string, title: string, riskTier: DomainRecord['riskTier']): DomainRecord {
     const d: DomainRecord = { id: id('dom'), slug, title, riskTier };
@@ -227,6 +234,125 @@ export class MemoryStore implements Store {
   }
   async listReviewQueue(): Promise<ReviewQueueItem[]> {
     return [...this.reviewQueue];
+  }
+
+  async listReviewQueueDetailed(): Promise<ReviewQueueEntry[]> {
+    const out: ReviewQueueEntry[] = [];
+    for (const item of this.reviewQueue) {
+      if (item.entity !== 'lesson') continue;
+      const lesson = this.lessons.get(item.entityId);
+      if (lesson === undefined) continue;
+      const skill = this.skills.get(lesson.skillId);
+      const domain = skill === undefined ? undefined : this.domains.get(skill.domainId);
+      out.push({
+        ...item,
+        lessonTitle: lesson.title,
+        skillStatement: skill?.statement ?? '',
+        domainTitle: domain?.title ?? '',
+        riskTier: domain?.riskTier ?? 'low',
+        verifyState: lesson.verifyState,
+        blockCount: lesson.blocks.length,
+      });
+    }
+    // Oldest first: this is a work queue, not a feed.
+    return out.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async getLessonForReview(lessonId: string): Promise<LessonForReview | undefined> {
+    const lesson = this.lessons.get(lessonId);
+    if (lesson === undefined) return undefined;
+    const skill = this.skills.get(lesson.skillId);
+    const domain = skill === undefined ? undefined : this.domains.get(skill.domainId);
+    const queued = this.reviewQueue.find((q) => q.entityId === lessonId);
+
+    const citations = this.citations
+      .filter((c) => c.lessonId === lessonId)
+      .map((c) => {
+        const source = this.sources.get(c.sourceId);
+        return {
+          quote: c.quote,
+          sourceUri: source?.uri ?? null,
+          sourceLicense: source?.license ?? null,
+        };
+      });
+
+    const path = [...this.paths.values()].find((p) => p.itemSkillIds.includes(lesson.skillId));
+
+    return {
+      lesson,
+      skillTitle: skill?.title ?? '',
+      skillStatement: skill?.statement ?? '',
+      domainTitle: domain?.title ?? '',
+      riskTier: domain?.riskTier ?? 'low',
+      citations,
+      reason: queued?.reason ?? 'flagged',
+      pathId: path?.id ?? null,
+    };
+  }
+
+  async recordReview(decision: ReviewDecision): Promise<ReviewOutcome> {
+    const lesson = this.lessons.get(decision.lessonId);
+    if (lesson === undefined) throw new Error(`no such lesson ${decision.lessonId}`);
+
+    // An approval is the only route a high-risk lesson has to publication, so the
+    // decision itself is recorded, not just its effect.
+    this.reviews.push({
+      entity: 'lesson',
+      entityId: decision.lessonId,
+      verdict: decision.verdict,
+      notes: decision.notes,
+      reviewerId: decision.reviewerId,
+      isExpert: decision.isExpert,
+      createdAt: new Date().toISOString(),
+    });
+
+    const verifyState: VerifyState =
+      decision.verdict === 'approve' ? 'human_approved'
+      : decision.verdict === 'reject' ? 'disputed'
+      : 'auto_failed';
+
+    this.lessons.set(lesson.id, { ...lesson, verifyState });
+
+    // Reviewed items leave the queue; otherwise the reviewer sees their own decisions.
+    const at = this.reviewQueue.findIndex((q) => q.entityId === decision.lessonId);
+    if (at !== -1) this.reviewQueue.splice(at, 1);
+
+    return {
+      verifyState,
+      publishedPathId: await this.tryPublishPathFor(lesson.skillId),
+    };
+  }
+
+  /**
+   * Publish a path once every lesson in it clears the gate.
+   *
+   * Without this an approval changes a state field and nothing visible happens, which
+   * makes reviewing feel pointless — and a reviewer who thinks their work does nothing
+   * stops doing it.
+   */
+  private async tryPublishPathFor(skillId: string): Promise<string | null> {
+    const path = [...this.paths.values()].find((p) => p.itemSkillIds.includes(skillId));
+    if (path === undefined || path.status === 'published') return null;
+
+    const domain = this.domains.get(path.domainId);
+    if (domain === undefined) return null;
+
+    for (const sid of path.itemSkillIds) {
+      const lesson = [...this.lessons.values()].find((l) => l.skillId === sid);
+      if (lesson === undefined) return null;
+      const citations = this.citations.filter((c) => c.lessonId === lesson.id);
+      const decision = evaluatePublishGate({
+        lessonId: lesson.id,
+        riskTier: domain.riskTier,
+        verifyState: lesson.verifyState,
+        citedSourceIds: citations.map((c) => c.sourceId),
+        unlicensedSourceIds: [],
+      });
+      if (!decision.publish) return null;
+    }
+
+    await this.publishPath(path.id, new Date().toISOString());
+    return path.id;
   }
 
   /** Total generation spend. The metric the business model rests on. */

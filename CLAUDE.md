@@ -92,6 +92,23 @@ let a fresh install converge by applying the baseline plus everything after it. 
 MemoryStore and runs against PostgresStore, so any divergence is a bug that only appears
 in production. Add a contract test before adding a Store method.
 
+## Review tool
+`/review` is the operator tool for approving content. It needs both `DATABASE_URL` and
+`REVIEW_TOKEN`, and fails closed without them — an unauthenticated approve button would
+make the whole publish gate decorative.
+
+- The token is a shared secret, not identity, so `reviews.reviewer_id` stays **null**.
+  Recording a made-up reviewer is worse than recording none, because "who approved this"
+  has to stay honestly answerable. Real auth lands with Supabase.
+- Server actions re-check access themselves. "The UI wouldn't let you" is not access
+  control.
+- Review mode shows the whole lesson at once **with every answer marked** — the reviewer is
+  auditing, not learning, so the learner-facing segmenting and hidden answers are wrong
+  there.
+- Approving the last outstanding lesson in a path publishes it. Without that an approval
+  changes a state field and nothing visible happens, and a reviewer who believes their work
+  does nothing stops doing it.
+
 ## The eval
 ```
 npm run eval -- --dry-run     estimate, spends nothing
@@ -129,8 +146,8 @@ store and a fake provider, and the learner app.
 Real Gemini and Claude adapters (`engine/providers/`), prompts, a parser for untrusted model
 output, a generate CLI, the eval harness, and the Postgres store with migrations. The full
 pipeline has been run end to end against a real Postgres. Not built yet: RLS policies
-(`db/policies.sql`, wave 3), the human review UI, FSRS replacing the 3-correct mastery
-stand-in, offline service worker, auth. See `docs/06-roadmap.md`.
+(`db/policies.sql`, wave 3), FSRS replacing the 3-correct mastery stand-in, offline service
+worker, real auth. See `docs/06-roadmap.md`.
 
 **The adapters have not been exercised against the live APIs** — no keys in this
 environment. Model ids and Flash prices need confirming before the first real run.
