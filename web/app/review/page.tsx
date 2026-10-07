@@ -44,6 +44,34 @@ export default async function ReviewQueue() {
     );
   }
 
+  if (!access.ok && access.reason === 'signed_out') {
+    return (
+      <Setup>
+        <p>You need to be signed in to review.</p>
+        <p>
+          <Link href="/login" className="underline hover:text-accent">Sign in</Link>, then
+          come back.
+        </p>
+      </Setup>
+    );
+  }
+
+  if (!access.ok && access.reason === 'not_a_reviewer') {
+    return (
+      <Setup>
+        <p>This account does not have the reviewer role.</p>
+        <p>
+          Reviewing is granted from the database, deliberately — approving is the only
+          route high-risk content has to publication, so it should not be a button someone
+          can be talked into pressing. An admin runs:
+        </p>
+        <pre className="rounded border border-border bg-surface p-3 text-xs">
+          select public.grant_platform_role(&apos;you@example.org&apos;, &apos;reviewer&apos;);
+        </pre>
+      </Setup>
+    );
+  }
+
   if (!access.ok) {
     return (
       <Setup>

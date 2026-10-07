@@ -1,41 +1,51 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { refreshSession } from './lib/supabase/middleware.ts';
+import { supabaseConfigured } from './lib/supabase/config.ts';
 
 /**
- * Exchanges `?token=…` for a cookie, once, and strips it from the URL.
+ * Two jobs, in order:
  *
- * Two reasons this is middleware rather than a check inside the page:
+ *  1. Refresh the Supabase session on every request. Access tokens are short-lived, and
+ *     without this a learner is signed out mid-lesson — which means losing the answer
+ *     they just gave.
  *
- *  1. A Server Component cannot set a cookie, so without this the token would have to be
- *     threaded through every link — and the first link that forgot it would 401.
- *  2. A token in the URL leaks: into browser history, into the Referer header on any
- *     outbound link, into logs. Reviewing a lesson means clicking through to its cited
- *     sources, so outbound links are the normal case here, not an edge case.
+ *  2. For the review tool in local development only, exchange `?token=…` for a cookie and
+ *     strip it from the URL. A token in the URL leaks into history and into the Referer
+ *     header on outbound links — and reviewing means clicking through to cited sources, so
+ *     outbound links are the normal case here, not an edge case.
  */
-export function middleware(request: NextRequest) {
-  const expected = process.env.REVIEW_TOKEN;
-  if (expected === undefined || expected === '') return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  // Once Supabase is configured the token path is dead, so don't honour it at all. A
+  // credential-free route to the approve button sitting alongside real auth is the kind
+  // of backdoor nobody notices, because everything appears to work.
+  if (!supabaseConfigured() && request.nextUrl.pathname.startsWith('/review')) {
+    const expected = process.env.REVIEW_TOKEN;
+    const token = request.nextUrl.searchParams.get('token');
 
-  const token = request.nextUrl.searchParams.get('token');
-  if (token === null) return NextResponse.next();
+    if (expected !== undefined && expected !== '' && token !== null) {
+      const url = request.nextUrl.clone();
+      url.searchParams.delete('token');
 
-  if (token !== expected) {
-    // Don't echo a wrong token back into the page; let the route render "not authorised".
-    const url = request.nextUrl.clone();
-    url.searchParams.delete('token');
-    return NextResponse.redirect(url);
+      if (token !== expected) {
+        // Don't echo a wrong token back; let the route render "not authorised".
+        return NextResponse.redirect(url);
+      }
+
+      const response = NextResponse.redirect(url);
+      response.cookies.set('learnloop_review', expected, {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/review',
+        maxAge: 60 * 60 * 12,
+      });
+      return response;
+    }
   }
 
-  const url = request.nextUrl.clone();
-  url.searchParams.delete('token');
-  const response = NextResponse.redirect(url);
-  response.cookies.set('learnloop_review', expected, {
-    httpOnly: true,
-    sameSite: 'lax',
-    path: '/review',
-    // Session-length. A reviewer's access should not outlive their browser.
-    maxAge: 60 * 60 * 12,
-  });
-  return response;
+  return refreshSession(request);
 }
 
-export const config = { matcher: '/review/:path*' };
+export const config = {
+  // Everything except static assets — the session refresh has to run app-wide.
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+};

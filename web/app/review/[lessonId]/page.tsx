@@ -16,7 +16,9 @@ export default async function ReviewLesson({
   if (!access.ok) {
     return (
       <main className="py-16 text-sm text-ink-soft">
-        Not authorised. Open <code>/review?token=…</code> first.
+        Not authorised.{' '}
+        <Link href="/review" className="underline hover:text-accent">Back to the queue</Link>
+        {' '}for how to get access.
       </main>
     );
   }

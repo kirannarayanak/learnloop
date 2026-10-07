@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { requireAccess } from '../../lib/review-auth.ts';
+import { requireReviewer } from '../../lib/review-auth.ts';
 import { reviewStore } from '../../lib/review-store.ts';
 import type { ReviewVerdict } from '@learnloop/engine/store/types.ts';
 
@@ -13,7 +13,7 @@ import type { ReviewVerdict } from '@learnloop/engine/store/types.ts';
  * is a public endpoint, and "the UI wouldn't let you" is not access control.
  */
 export async function submitReview(formData: FormData): Promise<void> {
-  await requireAccess();
+  const { reviewerId } = await requireReviewer();
 
   const lessonId = String(formData.get('lessonId') ?? '');
   const verdict = String(formData.get('verdict') ?? '') as ReviewVerdict;
@@ -33,9 +33,9 @@ export async function submitReview(formData: FormData): Promise<void> {
     lessonId,
     verdict,
     notes,
-    // Null on purpose: a shared secret is not identity, and a made-up reviewer id would
-    // be worse than none. See lib/review-auth.ts.
-    reviewerId: null,
+    // Real identity when Supabase is configured; null under the dev token, because a
+    // made-up reviewer id would be worse than none. See lib/review-auth.ts.
+    reviewerId,
     isExpert,
   });
 

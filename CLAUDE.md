@@ -98,14 +98,29 @@ let a fresh install converge by applying the baseline plus everything after it. 
 MemoryStore and runs against PostgresStore, so any divergence is a bug that only appears
 in production. Add a contract test before adding a Store method.
 
+## Auth
+Supabase, emailed sign-in links, no passwords. Setup: `docs/13-supabase.md`.
+
+- **Use the ANON key server-side, never the service role key.** The anon key is subject to
+  RLS, so a bug in a query leaks nothing a policy forbids. The service role key bypasses
+  every policy and belongs only in the pipeline.
+- **`getUser()`, never `getSession()`, for an access decision.** `getSession()` reads a
+  cookie the client could have tampered with.
+- **Signing in is optional for learners.** Everything works signed out. Requiring an
+  account before the first lesson is a conversion cliff, and the first lesson is where we
+  find out whether anyone finishes anything.
+- The reviewer role is granted by `public.grant_platform_role(...)` from the database, and
+  cannot be self-assigned (migration 007).
+
 ## Review tool
 `/review` is the operator tool for approving content. It needs both `DATABASE_URL` and
 `REVIEW_TOKEN`, and fails closed without them — an unauthenticated approve button would
 make the whole publish gate decorative.
 
-- The token is a shared secret, not identity, so `reviews.reviewer_id` stays **null**.
-  Recording a made-up reviewer is worse than recording none, because "who approved this"
-  has to stay honestly answerable. Real auth lands with Supabase.
+- With Supabase configured, access needs a signed-in account with the reviewer or admin
+  role, and `reviews.reviewer_id` records who. `REVIEW_TOKEN` is a local-development
+  fallback that is **refused outright** once Supabase is configured — a credential-free
+  route to the approve button beside real auth is a backdoor nobody notices.
 - Server actions re-check access themselves. "The UI wouldn't let you" is not access
   control.
 - Review mode shows the whole lesson at once **with every answer marked** — the reviewer is

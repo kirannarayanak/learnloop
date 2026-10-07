@@ -25,10 +25,8 @@ delete from skills where id::text like 'cccccccc-%';
 delete from org_members where org_id::text like 'bbbbbbbb-%';
 delete from orgs where id::text like 'bbbbbbbb-%';
 delete from domains where id::text like 'aaaaaaaa-%';
-delete from profiles where id in (
-  '11111111-1111-1111-1111-111111111111',
-  '22222222-2222-2222-2222-222222222222',
-  '33333333-3333-3333-3333-333333333333');
+delete from streaks where user_id::text like '11111111-%' or user_id::text like '22222222-%' or user_id::text like '33333333-%';
+-- profiles cascade from auth.users, so deleting the users is enough.
 delete from auth.users where email in ('alice@test', 'bob@test', 'reviewer@test');
 
 insert into auth.users (id, email) values
@@ -36,10 +34,22 @@ insert into auth.users (id, email) values
   ('22222222-2222-2222-2222-222222222222', 'bob@test'),
   ('33333333-3333-3333-3333-333333333333', 'reviewer@test');
 
-insert into profiles (id, handle, platform_role) values
-  ('11111111-1111-1111-1111-111111111111', 'alice', 'learner'),
-  ('22222222-2222-2222-2222-222222222222', 'bob', 'learner'),
-  ('33333333-3333-3333-3333-333333333333', 'rev', 'reviewer');
+-- The on_auth_user_created trigger (migration 009) already made these profiles, so set
+-- the roles rather than inserting. If this ever needs to insert again, the trigger has
+-- stopped firing — which would mean new users get no profile and every policy denies them.
+update profiles set handle = 'alice', platform_role = 'learner' where id = '11111111-1111-1111-1111-111111111111';
+update profiles set handle = 'bob',   platform_role = 'learner' where id = '22222222-2222-2222-2222-222222222222';
+update profiles set handle = 'rev',   platform_role = 'reviewer' where id = '33333333-3333-3333-3333-333333333333';
+
+do $$
+begin
+  if (select count(*) from profiles where id in (
+        '11111111-1111-1111-1111-111111111111',
+        '22222222-2222-2222-2222-222222222222',
+        '33333333-3333-3333-3333-333333333333')) <> 3 then
+    raise exception 'the signup trigger did not create profiles — new users would be locked out';
+  end if;
+end $$;
 
 insert into domains (id, slug, title, risk_tier) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'rls-pub', 'Public', 'low');
@@ -97,7 +107,8 @@ end $$;
 -- ---------------------------------------------------------------- anonymous
 begin;
 set local role anon;
-select assert('anon sees the published public path', (select count(*) from paths), 1::bigint);
+select assert('anon sees the published public path',
+  (select count(*) from paths where id::text like 'eeeeeeee-%'), 1::bigint);
 select assert('anon CANNOT see a draft path', (select count(*) from paths where slug = 'still-draft'), 0::bigint);
 select assert('anon CANNOT see an org-private path', (select count(*) from paths where slug = 'org-b-private'), 0::bigint);
 select assert('anon CANNOT read an unapproved lesson', (select count(*) from lessons where title = 'UNAPPROVED lesson'), 0::bigint);
@@ -108,7 +119,8 @@ rollback;
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
-select assert('alice sees her own attempt', (select count(*) from attempts), 1::bigint);
+select assert('alice sees her own attempt',
+  (select count(*) from attempts where client_id in ('alice-1','bob-1')), 1::bigint);
 select assert('alice CANNOT see bob''s attempt', (select count(*) from attempts where client_id = 'bob-1'), 0::bigint);
 select assert('alice sees only her own profile', (select count(*) from profiles), 1::bigint);
 rollback;
@@ -177,13 +189,13 @@ rollback;
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-1111-1111-111111111111","role":"authenticated"}';
-select assert('a learner CANNOT read the review queue', (select count(*) from reviews), 0::bigint);
+select assert('a learner CANNOT read the review queue', (select count(*) from reviews where entity_id::text like 'dddddddd-%'), 0::bigint);
 rollback;
 
 begin;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"33333333-3333-3333-3333-333333333333","role":"authenticated"}';
-select assert('a reviewer CAN read the review queue', (select count(*) from reviews), 1::bigint);
+select assert('a reviewer CAN read the review queue', (select count(*) from reviews where entity_id::text like 'dddddddd-%'), 1::bigint);
 rollback;
 
 -- ------------------------------------------------------- never client-visible
@@ -210,8 +222,10 @@ rollback;
 -- ------------------------------------------------------------- service_role
 begin;
 set local role service_role;
-select assert('service_role sees every path (BYPASSRLS)', (select count(*) from paths), 3::bigint);
-select assert('service_role sees every attempt', (select count(*) from attempts), 2::bigint);
+select assert('service_role sees drafts and org-private paths (BYPASSRLS)',
+  (select count(*) from paths where id::text like 'eeeeeeee-%'), 3::bigint);
+select assert('service_role sees every learner''s attempts',
+  (select count(*) from attempts where client_id in ('alice-1','bob-1')), 2::bigint);
 rollback;
 
 \echo 'ALL RLS ASSERTIONS PASSED'

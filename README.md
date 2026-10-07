@@ -33,6 +33,7 @@ Read the thinking in order:
 | [docs/10-motivation.md](docs/10-motivation.md) | Structure and incentives, from the evidence — and what the evidence says not to build |
 | [docs/11-lesson-design.md](docs/11-lesson-design.md) | What a lesson actually is: blocks, narration, and why a read-aloud button is a harm |
 | [docs/12-eval.md](docs/12-eval.md) | The eval: cases, graders, budget, and its honest limitations |
+| [docs/13-supabase.md](docs/13-supabase.md) | Provisioning checklist, how auth works, and what is still open |
 
 ## Run it
 
@@ -83,7 +84,12 @@ docker compose up -d && npm run migrate && npm test
 A review tool at `/review` — the human approval queue that high-risk content cannot
 publish without. Needs `DATABASE_URL` and `REVIEW_TOKEN`, and fails closed without them.
 
-Not yet: RLS policies, FSRS, offline service worker, real auth.
+Row-level security with 22 assertions (`npm run test:rls`) — which found a privilege
+escalation and two other holes — plus Supabase auth: emailed sign-in links, a
+reviewer role that cannot be self-assigned, and sessions refreshed in middleware.
+
+Not yet: learner progress sync across devices, org/cohort screens, FSRS, offline service
+worker.
 
 **The adapters have not been exercised against the live APIs** — no keys were available
 when they were written, so model ids and Flash pricing need confirming before the first
