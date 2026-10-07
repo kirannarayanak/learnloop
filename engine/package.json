@@ -1,0 +1,14 @@
+{
+  "name": "@learnloop/engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ingest -> graph -> draft -> verify -> publish. Runs as a worker and as a CLI; must not import from web/.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

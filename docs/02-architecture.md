@@ -44,7 +44,8 @@ This is what makes the free tier survivable (see `05-economics.md`).
 | Vector search | **pgvector** inside the same Postgres | Dedupe near-identical skills, semantic search, "find the lesson that teaches this". No second database to run | — (it's just Postgres) |
 | Object storage | **Cloudflare R2** (10GB free, **zero egress**) | Offline bundles and images are egress-heavy; S3 egress would bankrupt us | Supabase Storage; Backblaze B2 |
 | Jobs / queue | **Postgres job table + cron** (`generation_jobs`) | A queue you can read with SQL beats a queue you can't debug. Scales far past where we'll be | Cloudflare Queues; pg-boss; Inngest free |
-| Generation | **Claude**: Haiku 4.5 bulk, Sonnet 5 hard subjects, Opus 5 for the schema/graph passes | Cost ladder, not one model everywhere. Batch API = 50% off for non-urgent generation | Local Llama/Qwen via Ollama for dev + dumb passes |
+| Generation | **Provider-agnostic** (`engine/providers/routing.ts`). Gemini primary; verify on a different family | Long context for whole-syllabus ingest, native PDF/video, strong Indic languages. A cost ladder per stage, not one model everywhere | Any family — that's the point of the adapter. Ollama locally for dev |
+| Embeddings | **Open model** (BGE / E5 / Nomic / Qwen), self-run | No reason to ever pay for embeddings. Must match `vector(N)` in the schema | — |
 | Search | Postgres FTS + pgvector hybrid | No Elasticsearch to operate | Meilisearch (OSS) if FTS stops being enough |
 | i18n | `next-intl` + `translations` table | Translation is a row, not a fork of the content | — |
 | Email | **Resend** (3k/mo free) | — | Postmark; AWS SES |
