@@ -30,6 +30,16 @@ to a different family on purpose. Embeddings are always an open model.
 - **Never name a model outside `engine/providers/routing.ts`.** Stages take a `ModelRef`.
 - **Multi-tenant isolation is RLS, not `WHERE org_id = ?`.** Policies in `db/policies.sql`.
 - **`sources.license` null ⇒ cite and link only, never reproduce.** Legal gate, in code.
+- **Never award points for correct answers.** Points reward effort and consistency only.
+  Rewarding correctness punishes struggling learners and drives avoidance of hard material
+  (`docs/10-motivation.md` finding 5). There is a test that fails if a correctness kind appears.
+- **No global leaderboard, ever.** Macro leaderboards demonstrably harm lower performers.
+  Small bucketed leagues (~30), opt-in, personal-best by default (finding 3).
+- **Mastery gating is SOFT.** Mastery gates *credit*, never *access* — hard-locking content
+  reduces completion and would fight our own wave-0 exit gate (finding 2). `skill_readiness`
+  is an advisory view; it must not block anything.
+- **Streak freezes are earned and auto-applied, never sold.** Monetising a motivation
+  mechanic corrupts it, and protection outperforms reward anyway (finding 4).
 
 ## Cost discipline
 - Batch API for every generation pass; nothing in the pipeline is latency-sensitive.
@@ -46,5 +56,18 @@ to a different family on purpose. Embeddings are always an open model.
   it, it isn't a skill — don't create the row.
 - The prerequisite graph must stay acyclic. `engine/graph/validate.ts` fails the job on a cycle.
 
+## Running the engine
+```
+cd engine && npm install
+npm run typecheck     # strict tsc
+npm test              # node --test, no test framework dependency
+```
+Node runs the `.ts` files directly via native type stripping, so **imports use `.ts`
+extensions** and TS syntax needing transformation is unavailable — no enums, no namespaces,
+no constructor parameter properties. Write explicit fields instead.
+
 ## Current state
-Pre-wave-0: schema + docs only. Next up is the wave-0 vertical slice (see `docs/06-roadmap.md`).
+Wave 0 in progress. Done: schema + incentives migration, provider adapter, DAG validator,
+publish gate, streak/points logic — all typechecked and tested (29 tests).
+Not built yet: the pipeline stages themselves (ingest/graph/draft/verify orchestration),
+the review queue, and `web/`. See `docs/06-roadmap.md`.

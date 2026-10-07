@@ -3,7 +3,7 @@ import {
   type ModelRef,
   type Stage,
   VerifierIndependenceError,
-} from './types.js';
+} from './types.ts';
 
 /**
  * The ONLY place a model choice lives.

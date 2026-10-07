@@ -29,6 +29,8 @@ Read the thinking in order:
 | [docs/05-economics.md](docs/05-economics.md) | Cost per path, free-tier caps, PPP pricing, break-even |
 | [docs/06-roadmap.md](docs/06-roadmap.md) | Four waves, each with a numeric exit gate |
 | [docs/07-risks.md](docs/07-risks.md) | Wrong content, nobody finishing, cost, licensing, incumbents |
+| [docs/09-model-strategy.md](docs/09-model-strategy.md) | Which model per stage, open vs. hosted, why not fine-tuning |
+| [docs/10-motivation.md](docs/10-motivation.md) | Structure and incentives, from the evidence — and what the evidence says not to build |
 
 ## Repo layout
 
@@ -41,8 +43,13 @@ docs/     the thinking, kept in the repo on purpose
 
 ## Status
 
-**Pre-wave-0.** The schema, the risk gate and the plan exist; the pipeline does not yet.
-Next commit is the wave-0 vertical slice: one source in, one finishable path out.
+**Wave 0, in progress.**
+
+Done: schema + incentives, the provider adapter, the prerequisite-DAG validator, the publish
+gate, and the streak/points logic — typechecked strict and covered by 29 tests.
+
+Next: the pipeline stages themselves (ingest → graph → draft → verify orchestration), the
+human review queue, and the learner-facing PWA in `web/`.
 
 ## Non-negotiables
 

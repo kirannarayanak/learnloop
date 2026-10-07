@@ -5,7 +5,8 @@
   "type": "module",
   "description": "ingest -> graph -> draft -> verify -> publish. Runs as a worker and as a CLI; must not import from web/.",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test test/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
