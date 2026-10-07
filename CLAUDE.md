@@ -73,6 +73,17 @@ it is safe to run without keys. With keys it prints a cost estimate and asks bef
 spending. Prompts live in `engine/stages/prompts.ts` — that file, not the model choice, is
 what decides whether a lesson teaches.
 
+## The eval
+```
+npm run eval -- --dry-run     estimate, spends nothing
+npm run eval                  4 cases, free deterministic graders
+npm run eval -- --judge       adds the paid rubric judge
+```
+Run it before and after any prompt or model change. The gate check is pass/fail and exits
+non-zero: a high-risk case that publishes is a failed run regardless of its score. Never
+grade generated lessons by similarity to the golden lesson — that rewards imitation.
+See `docs/12-eval.md`, including its stated limitations.
+
 ## Running it
 npm workspaces; run everything from the repo root.
 ```
@@ -96,10 +107,10 @@ Done: schema + incentives, provider adapter, DAG validator, publish gate, streak
 the full pipeline (ingest -> graph -> draft -> verify -> publish) against an in-memory
 store and a fake provider, and the learner app.
 
-Real Gemini and Claude adapters exist (`engine/providers/`), with prompts, a parser for
-untrusted model output, and a CLI. Not built yet: the Postgres `Store`, the human review UI,
-FSRS replacing the 3-correct mastery stand-in, the eval harness, offline service worker,
-auth. See `docs/06-roadmap.md`.
+Real Gemini and Claude adapters (`engine/providers/`), prompts, a parser for untrusted model
+output, a generate CLI, and the eval harness. Not built yet: the Postgres `Store`, the human
+review UI, FSRS replacing the 3-correct mastery stand-in, offline service worker, auth.
+See `docs/06-roadmap.md`.
 
 **The adapters have not been exercised against the live APIs** — no keys in this
 environment. Model ids and Flash prices need confirming before the first real run.

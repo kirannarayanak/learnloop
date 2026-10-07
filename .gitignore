@@ -13,3 +13,4 @@ coverage/
 .turbo/
 next-env.d.ts
 *.tsbuildinfo
+engine/eval/results/

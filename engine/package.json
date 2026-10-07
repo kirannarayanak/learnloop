@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test test/*.test.ts",
     "seed": "node scripts/seed.ts",
-    "generate": "node scripts/generate.ts"
+    "generate": "node scripts/generate.ts",
+    "eval": "node eval/run.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

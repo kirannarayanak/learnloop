@@ -1,0 +1,562 @@
+Newton's laws of motion are three physical laws that describe the relationship between the motion of an object and the forces acting on it. These laws, which provide the basis for Newtonian mechanics, can be paraphrased as follows:
+
+A body remains at rest, or in motion at a constant speed in a straight line, unless it is acted upon by a force.
+At any instant of time, the net force on a body is equal to the body's acceleration multiplied by its mass or, equivalently, the rate at which the body's momentum is changing with time.
+If two bodies exert forces on each other, these forces have the same magnitude but opposite directions.
+The three laws of motion were first stated by Isaac Newton in his Philosophiæ Naturalis Principia Mathematica (Mathematical Principles of Natural Philosophy), originally published in 1687. Newton used them to investigate and explain the motion of many physical objects and systems. In the time since Newton, new insights, especially around the concept of energy, built the field of classical mechanics on his foundations. In modern times, limitations to Newton's laws have been discovered; new theories were consequently developed, such as quantum mechanics and relativity to address the physics of objects in more extreme cases.
+
+
+== Prerequisites ==
+Newton's laws are often stated in terms of point or particle masses, that is, bodies whose volume is negligible. This is a reasonable approximation for real bodies when the motion of internal parts can be neglected, and when the separation between bodies is much larger than the size of each. For instance, the Earth and the Sun can both be approximated as pointlike when considering the orbit of the former around the latter, but the Earth is not pointlike when considering activities on its surface.
+The mathematical description of motion, or kinematics, is based on the idea of specifying positions using numerical coordinates. Movement is represented by these numbers changing over time: a body's trajectory is represented by a function that assigns to each value of a time variable the values of all the position coordinates. The simplest case is one-dimensional, that is, when a body is constrained to move only along a straight line. Its position can then be given by a single number, indicating where it is relative to some chosen reference point. For example, a body might be free to slide along a track that runs left to right, and so its location can be specified by its distance from a convenient zero point, or origin, with negative numbers indicating positions to the left and positive numbers indicating positions to the right. If the body's location as a function of time is 
+  
+    
+      
+        s
+        (
+        t
+        )
+      
+    
+    {\displaystyle s(t)}
+  
+, then its average velocity over the time interval from 
+  
+    
+      
+        
+          t
+          
+            0
+          
+        
+      
+    
+    {\displaystyle t_{0}}
+  
+ to 
+  
+    
+      
+        
+          t
+          
+            1
+          
+        
+      
+    
+    {\displaystyle t_{1}}
+  
+ is 
+  
+    
+      
+        
+          
+            
+              Δ
+              s
+            
+            
+              Δ
+              t
+            
+          
+        
+        =
+        
+          
+            
+              s
+              (
+              
+                t
+                
+                  1
+                
+              
+              )
+              −
+              s
+              (
+              
+                t
+                
+                  0
+                
+              
+              )
+            
+            
+              
+                t
+                
+                  1
+                
+              
+              −
+              
+                t
+                
+                  0
+                
+              
+            
+          
+        
+        .
+      
+    
+    {\displaystyle {\frac {\Delta s}{\Delta t}}={\frac {s(t_{1})-s(t_{0})}{t_{1}-t_{0}}}.}
+  
+Here, the Greek letter 
+  
+    
+      
+        Δ
+      
+    
+    {\displaystyle \Delta }
+  
+ (delta) is used, per tradition, to mean "change in". A positive average velocity means that the position coordinate 
+  
+    
+      
+        s
+      
+    
+    {\displaystyle s}
+  
+ increases over the interval in question, a negative average velocity indicates a net decrease over that interval, and an average velocity of zero means that the body ends the time interval in the same place as it began. Calculus gives the means to define an instantaneous velocity, a measure of a body's speed and direction of movement at a single moment of time, rather than over an interval. One notation for the instantaneous velocity is to replace 
+  
+    
+      
+        Δ
+      
+    
+    {\displaystyle \Delta }
+  
+ with the symbol 
+  
+    
+      
+        
+          d
+        
+      
+    
+    {\displaystyle \mathrm {d} }
+  
+, for example,
+  
+    
+      
+        v
+        =
+        
+          
+            
+              
+                d
+              
+              s
+            
+            
+              
+                d
+              
+              t
+            
+          
+        
+        .
+      
+    
+    {\displaystyle v={\frac {\mathrm {d} s}{\mathrm {d} t}}.}
+  
+This denotes that the instantaneous velocity is the derivative of the position with respect to time. It can roughly be thought of as the ratio between an infinitesimally small change in position 
+  
+    
+      
+        
+          d
+        
+        s
+      
+    
+    {\displaystyle \mathrm {d} s}
+  
+ to the infinitesimally small time interval 
+  
+    
+      
+        
+          d
+        
+        t
+      
+    
+    {\displaystyle \mathrm {d} t}
+  
+ over which it occurs. More carefully, the velocity and all other derivatives can be defined using the concept of a limit. A function 
+  
+    
+      
+        f
+        (
+        t
+        )
+      
+    
+    {\displaystyle f(t)}
+  
+ has a limit of 
+  
+    
+      
+        L
+      
+    
+    {\displaystyle L}
+  
+ at a given input value 
+  
+    
+      
+        
+          t
+          
+            0
+          
+        
+      
+    
+    {\displaystyle t_{0}}
+  
+ if the difference between 
+  
+    
+      
+        f
+      
+    
+    {\displaystyle f}
+  
+ and 
+  
+    
+      
+        L
+      
+    
+    {\displaystyle L}
+  
+ can be made arbitrarily small by choosing an input sufficiently close to 
+  
+    
+      
+        
+          t
+          
+            0
+          
+        
+      
+    
+    {\displaystyle t_{0}}
+  
+. One writes, 
+  
+    
+      
+        
+          lim
+          
+            t
+            →
+            
+              t
+              
+                0
+              
+            
+          
+        
+        f
+        (
+        t
+        )
+        =
+        L
+        .
+      
+    
+    {\displaystyle \lim _{t\to t_{0}}f(t)=L.}
+  
+Instantaneous velocity can be defined as the limit of the average velocity as the time interval shrinks to zero:
+  
+    
+      
+        
+          
+            
+              
+                d
+              
+              s
+            
+            
+              
+                d
+              
+              t
+            
+          
+        
+        =
+        
+          lim
+          
+            Δ
+            t
+            →
+            0
+          
+        
+        
+          
+            
+              s
+              (
+              t
+              +
+              Δ
+              t
+              )
+              −
+              s
+              (
+              t
+              )
+            
+            
+              Δ
+              t
+            
+          
+        
+        .
+      
+    
+    {\displaystyle {\frac {\mathrm {d} s}{\mathrm {d} t}}=\lim _{\Delta t\to 0}{\frac {s(t+\Delta t)-s(t)}{\Delta t}}.}
+  
+ Acceleration is to velocity as velocity is to position: it is the derivative of the velocity with respect to time. Acceleration can likewise be defined as a limit:
+  
+    
+      
+        a
+        =
+        
+          
+            
+              
+                d
+              
+              v
+            
+            
+              
+                d
+              
+              t
+            
+          
+        
+        =
+        
+          lim
+          
+            Δ
+            t
+            →
+            0
+          
+        
+        
+          
+            
+              v
+              (
+              t
+              +
+              Δ
+              t
+              )
+              −
+              v
+              (
+              t
+              )
+            
+            
+              Δ
+              t
+            
+          
+        
+        .
+      
+    
+    {\displaystyle a={\frac {\mathrm {d} v}{\mathrm {d} t}}=\lim _{\Delta t\to 0}{\frac {v(t+\Delta t)-v(t)}{\Delta t}}.}
+  
+Consequently, the acceleration is the second derivative of position, often written 
+  
+    
+      
+        
+          
+            
+              
+                
+                  d
+                
+                
+                  2
+                
+              
+              s
+            
+            
+              
+                d
+              
+              
+                t
+                
+                  2
+                
+              
+            
+          
+        
+      
+    
+    {\displaystyle {\frac {\mathrm {d} ^{2}s}{\mathrm {d} t^{2}}}}
+  
+.
+Position, when thought of as a displacement from an origin point, is a vector: a quantity with both magnitude and direction. Velocity and acceleration are vector quantities as well. The mathematical tools of vector algebra provide the means to describe motion in two, three or more dimensions. Vectors are often denoted with an arrow, as in  
+  
+    
+      
+        
+          
+            
+              s
+              →
+            
+          
+        
+      
+    
+    {\displaystyle {\vec {s}}}
+  
+, or in bold typeface, such as 
+  
+    
+      
+        
+          
+            s
+          
+        
+      
+    
+    {\displaystyle {\bf {s}}}
+  
+. Often, vectors are represented visually as arrows, with the direction of the vector being the direction of the arrow, and the magnitude of the vector indicated by the length of the arrow. Numerically, a vector can be represented as a list; for example, a body's velocity vector might be 
+  
+    
+      
+        
+          v
+        
+        =
+        (
+        
+          3
+           
+          m
+          
+            /
+          
+          s
+        
+        ,
+        
+          4
+           
+          m
+          
+            /
+          
+          s
+        
+        )
+      
+    
+    {\displaystyle \mathbf {v} =(\mathrm {3~m/s} ,\mathrm {4~m/s} )}
+  
+, indicating that it is moving at 3 metres per second along the horizontal axis and 4 metres per second along the vertical axis. The same motion described in a different coordinate system will be represented by different numbers, and vector algebra can be used to translate between these alternatives.
+The study of mechanics is complicated by the fact that household words like energy are used with a technical meaning. Moreover, words which are synonymous in everyday speech are not so in physics: force is not the same as power or pressure, for example, and mass has a different meaning than weight. The physics concept of force makes quantitative the everyday idea of a push or a pull. Forces in Newtonian mechanics are often due to strings and ropes, friction, muscle effort, gravity, and so forth. Like displacement, velocity, and acceleration, force is a vector quantity.
+
+
+== Laws ==
+
+
+=== First law ===
+
+Every body continues in its state of rest, or of uniform motion in a straight line, unless it is compelled to change that state by forces impressed upon it.
+Newton's first law expresses the principle of inertia: the natural behavior of a body is to move in a straight line at constant speed. A body's motion preserves the status quo, but external forces can perturb this.
+The modern understanding of Newton's first law is that no inertial observer is privileged over any other. The concept of an inertial observer makes quantitative the everyday idea of feeling no effects of motion. For example, a person standing on the ground watching a train go past is an inertial observer. If the observer on the ground sees the train moving smoothly in a straight line at a constant speed, then a passenger sitting on the train will also be an inertial observer: the train passenger feels no motion. The principle expressed by Newton's first law is that there is no way to say which inertial observer is "really" moving and which is "really" standing still. One observer's state of rest is another observer's state of uniform motion in a straight line, and no experiment can deem either point of view to be correct or incorrect. There is no absolute standard of rest. Newton himself believed that absolute space and time existed, but that the only measures of space or time accessible to experiment are relative.
+
+
+=== Second law ===
+The change of motion of an object is proportional to the force impressed; and is made in the direction of the straight line in which the force is impressed.
+By "motion", Newton meant the quantity now called momentum, which depends upon the amount of matter contained in a body, the speed at which that body is moving, and the direction in which it is moving. In modern notation, the momentum of a body is the product of its mass and its velocity:
+
+  
+    
+      
+        
+          p
+        
+        =
+        m
+        
+          v
+        
+        
+        ,
+      
+    
+    {\displaystyle \mathbf {p} =m\mathbf {v} \,,}
+  
+
+where all three quantities can change over time.
+In common cases the mass 
+  
+    
+      
+        m
+      
+    
+    {\displaystyle m}
+  
+ does not change with time and the derivative acts only upon the velocity. Then force equals the product of the mass and the time derivative of the velocity, which is the acceleration:
+
+  
+    
+      
+        
+ 

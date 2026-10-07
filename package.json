@@ -11,6 +11,7 @@
     "seed": "npm run seed --workspace @learnloop/engine",
     "dev": "npm run seed && npm run dev --workspace @learnloop/web",
     "build": "npm run seed && npm run build --workspace @learnloop/web",
-    "generate": "npm run generate --workspace @learnloop/engine --"
+    "generate": "npm run generate --workspace @learnloop/engine --",
+    "eval": "npm run eval --workspace @learnloop/engine --"
   }
 }

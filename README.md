@@ -32,6 +32,7 @@ Read the thinking in order:
 | [docs/09-model-strategy.md](docs/09-model-strategy.md) | Which model per stage, open vs. hosted, why not fine-tuning |
 | [docs/10-motivation.md](docs/10-motivation.md) | Structure and incentives, from the evidence — and what the evidence says not to build |
 | [docs/11-lesson-design.md](docs/11-lesson-design.md) | What a lesson actually is: blocks, narration, and why a read-aloud button is a harm |
+| [docs/12-eval.md](docs/12-eval.md) | The eval: cases, graders, budget, and its honest limitations |
 
 ## Run it
 
@@ -65,8 +66,14 @@ Real Gemini and Claude adapters, prompts, a parser for untrusted model output, a
 npm run generate -- --file ./notes.md --domain emerging-tech --dry-run
 ```
 
-Not yet: the Postgres store, the human review UI, FSRS, the eval harness, offline service
-worker, auth.
+An eval over 8 real openly-licensed sources, with free deterministic graders and an
+optional paid rubric judge:
+
+```
+npm run eval -- --dry-run
+```
+
+Not yet: the Postgres store, the human review UI, FSRS, offline service worker, auth.
 
 **The adapters have not been exercised against the live APIs** — no keys were available
 when they were written, so model ids and Flash pricing need confirming before the first
